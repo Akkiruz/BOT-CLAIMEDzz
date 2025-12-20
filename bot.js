@@ -64,6 +64,26 @@ const HUNTS = {
 // Armazena os claims ativos {huntId: {user, username, channel, timestamp, endTime}}
 const activeClaims = {};
 
+// Função para formatar horário em Brasília (UTC-3)
+function formatBrasiliaTime(timestamp) {
+  return new Date(timestamp).toLocaleTimeString('pt-BR', { 
+    hour: '2-digit', 
+    minute: '2-digit',
+    timeZone: 'America/Sao_Paulo'
+  });
+}
+
+// Função para formatar data e hora completa em Brasília
+function formatBrasiliaDateTime(timestamp) {
+  return new Date(timestamp).toLocaleString('pt-BR', { 
+    day: '2-digit',
+    month: '2-digit',
+    hour: '2-digit', 
+    minute: '2-digit',
+    timeZone: 'America/Sao_Paulo'
+  });
+}
+
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
@@ -165,6 +185,7 @@ async function updateStatusChannel() {
       .setColor(category === 'HARD' ? '#FF0000' : category === 'VIP' ? '#FFD700' : '#00FF00')
       .setTitle(`📍 ${category}`)
       .setDescription(description || 'Nenhum claim ativo')
+      .setFooter({ text: '🕐 Horário de Brasília (UTC-3) • Atualiza a cada minuto' })
       .setTimestamp();
 
     await channel.send({ embeds: [embed] });
@@ -183,6 +204,7 @@ async function updateStatusChannel() {
       .setColor('#00FF00')
       .setTitle('✅ Hunts Disponíveis')
       .setDescription(availableHunts.join('\n') || 'Todas claimed!')
+      .setFooter({ text: '🕐 Horário de Brasília (UTC-3)' })
       .setTimestamp();
 
     await channel.send({ embeds: [embed] });
@@ -276,7 +298,7 @@ async function claimHunt(message, huntId) {
     endTime: endTime
   };
 
-  const endTimeFormatted = new Date(endTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  const endTimeFormatted = formatBrasiliaTime(endTime);
 
   const embed = new EmbedBuilder()
     .setColor('#00FF00')
@@ -287,7 +309,7 @@ async function claimHunt(message, huntId) {
       { name: '⏱️ Duração', value: `${hunt.duration} minutos`, inline: true },
       { name: '🕐 Expira às', value: endTimeFormatted, inline: true }
     )
-    .setFooter({ text: `Use !release ${huntId} para liberar | !tempo ${huntId} para ver tempo restante` })
+    .setFooter({ text: `Use !release ${huntId} para liberar | !tempo ${huntId} para ver tempo restante • Horário de Brasília` })
     .setTimestamp();
 
   await message.reply({ embeds: [embed] });
@@ -311,7 +333,7 @@ function checkTime(message, huntId) {
   }
 
   const timeRemaining = getTimeRemainingDetailed(claim.endTime);
-  const endTimeFormatted = new Date(claim.endTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  const endTimeFormatted = formatBrasiliaTime(claim.endTime);
 
   const embed = new EmbedBuilder()
     .setColor('#FFA500')
@@ -322,6 +344,7 @@ function checkTime(message, huntId) {
       { name: '⏱️ Tempo restante', value: timeRemaining, inline: true },
       { name: '🕐 Expira às', value: endTimeFormatted, inline: true }
     )
+    .setFooter({ text: 'Horário de Brasília (UTC-3)' })
     .setTimestamp();
 
   message.reply({ embeds: [embed] });
@@ -432,6 +455,7 @@ function showStatus(message) {
     .setColor('#0099FF')
     .setTitle('📊 Status dos Claims Ativos')
     .setDescription('Todas as hunts claimed no momento')
+    .setFooter({ text: 'Horário de Brasília (UTC-3)' })
     .setTimestamp();
 
   let hasActiveClaims = false;
@@ -440,7 +464,7 @@ function showStatus(message) {
     hasActiveClaims = true;
     const hunt = HUNTS[id];
     const timeRemaining = getTimeRemainingDetailed(claim.endTime);
-    const endTimeFormatted = new Date(claim.endTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    const endTimeFormatted = formatBrasiliaTime(claim.endTime);
     
     embed.addFields({
       name: `🔹 ${hunt.name}`,
