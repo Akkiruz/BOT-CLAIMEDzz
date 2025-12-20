@@ -1,7 +1,13 @@
 const { Client, GatewayIntentBits, EmbedBuilder, ChannelType, PermissionFlagsBits } = require('discord.js');
 
-// CONFIGURAÇÃO - Cole seu token aqui
-const TOKEN = 'SEU_TOKEN_AQUI';
+// CONFIGURAÇÃO - Lê o token da variável de ambiente
+const TOKEN = process.env.TOKEN;
+
+// Validação do token
+if (!TOKEN) {
+  console.error('❌ ERRO: Token não encontrado! Configure a variável de ambiente TOKEN no Railway.');
+  process.exit(1);
+}
 
 // ID do canal de status (será criado automaticamente)
 let statusChannelId = null;
@@ -227,9 +233,8 @@ function listHunts(message) {
       description += `${status} **${hunt.name}** (\`${id}\`)\n`;
       if (claim) {
         const time = getTimeRemainingDetailed(claim.endTime);
-        description += `   👤 <@${claim.user}> | ⏰ ${time}\n`;
+        description += `   👤 ${claim.username} | ⏰ ${time}\n`;
       }
-      description += '\n';
     });
 
     const embed = new EmbedBuilder()
@@ -461,4 +466,18 @@ client.on('messageCreate', async message => {
   }
 });
 
-client.login(TOKEN);
+// Tratamento de erros
+client.on('error', error => {
+  console.error('❌ Erro no cliente Discord:', error);
+});
+
+process.on('unhandledRejection', error => {
+  console.error('❌ Promise rejection não tratada:', error);
+});
+
+// Login
+client.login(TOKEN).catch(error => {
+  console.error('❌ Erro ao fazer login:', error);
+  console.error('Verifique se o TOKEN está correto na variável de ambiente.');
+  process.exit(1);
+});
