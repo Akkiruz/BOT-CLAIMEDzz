@@ -327,6 +327,11 @@ function checkTime(message, huntId) {
   message.reply({ embeds: [embed] });
 }
 
+// Verifica se o usuário é administrador
+function isAdmin(message) {
+  return message.member.permissions.has(PermissionFlagsBits.Administrator);
+}
+
 // Comando: !release <hunt> - Liberar uma hunt
 async function releaseHunt(message, huntId) {
   const hunt = HUNTS[huntId];
@@ -347,6 +352,75 @@ async function releaseHunt(message, huntId) {
 
   delete activeClaims[huntId];
   await message.reply(`✅ **${hunt.name}** foi liberada e está disponível novamente!`);
+  
+  // Atualiza canal de status
+  await updateStatusChannel();
+}
+
+// Comando: !forcerelease <hunt> - Forçar liberação (ADMIN)
+async function forceReleaseHunt(message, huntId) {
+  if (!isAdmin(message)) {
+    return message.reply(`❌ Este comando é apenas para administradores!`);
+  }
+
+  const hunt = HUNTS[huntId];
+  
+  if (!hunt) {
+    return message.reply(`❌ Hunt não encontrada!`);
+  }
+
+  const claim = activeClaims[huntId];
+  
+  if (!claim) {
+    return message.reply(`❌ **${hunt.name}** não está claimed!`);
+  }
+
+  const claimedBy = claim.username;
+  delete activeClaims[huntId];
+  
+  const embed = new EmbedBuilder()
+    .setColor('#FF0000')
+    .setTitle('🔨 Claim Removido (Admin)')
+    .setDescription(`**${hunt.name}** foi liberada por um administrador`)
+    .addFields(
+      { name: '👤 Estava claimed por', value: claimedBy, inline: true },
+      { name: '🛡️ Liberado por', value: message.author.username, inline: true }
+    )
+    .setTimestamp();
+
+  await message.reply({ embeds: [embed] });
+  
+  // Atualiza canal de status
+  await updateStatusChannel();
+}
+
+// Comando: !clearall - Limpar todos os claims (ADMIN)
+async function clearAllClaims(message) {
+  if (!isAdmin(message)) {
+    return message.reply(`❌ Este comando é apenas para administradores!`);
+  }
+
+  const claimCount = Object.keys(activeClaims).length;
+  
+  if (claimCount === 0) {
+    return message.reply(`✅ Não há claims ativos para limpar!`);
+  }
+
+  // Limpa todos os claims
+  for (const huntId in activeClaims) {
+    delete activeClaims[huntId];
+  }
+
+  const embed = new EmbedBuilder()
+    .setColor('#FF0000')
+    .setTitle('🧹 Todos os Claims Removidos')
+    .setDescription(`**${claimCount} claim(s)** foram removidos por um administrador`)
+    .addFields(
+      { name: '🛡️ Removido por', value: message.author.username }
+    )
+    .setTimestamp();
+
+  await message.reply({ embeds: [embed] });
   
   // Atualiza canal de status
   await updateStatusChannel();
@@ -435,6 +509,10 @@ client.on('messageCreate', async message => {
     checkTime(message, args[1]);
   } else if (command === '!release' && args[1]) {
     await releaseHunt(message, args[1]);
+  } else if (command === '!forcerelease' && args[1]) {
+    await forceReleaseHunt(message, args[1]);
+  } else if (command === '!clearall') {
+    await clearAllClaims(message);
   } else if (command === '!status') {
     showStatus(message);
   } else if (command === '!criar-status') {
@@ -445,6 +523,8 @@ client.on('messageCreate', async message => {
       message.reply(`✅ Canal de status criado/atualizado: <#${channel.id}>`);
     }
   } else if (command === '!help' || command === '!ajuda') {
+    const isUserAdmin = isAdmin(message);
+    
     const helpEmbed = new EmbedBuilder()
       .setColor('#FFD700')
       .setTitle('📖 Comandos do Bot - Tibia Hunt Manager')
@@ -461,6 +541,15 @@ client.on('messageCreate', async message => {
       )
       .setFooter({ text: 'Bot criado para gerenciamento de hunts' })
       .setTimestamp();
+    
+    // Adiciona comandos de admin se o usuário for admin
+    if (isUserAdmin) {
+      helpEmbed.addFields(
+        { name: '\n🛡️ **COMANDOS ADMIN**', value: '━━━━━━━━━━━━━━━━━━━━' },
+        { name: '!forcerelease <hunt>', value: '🔨 Remove claim de qualquer hunt\nEx: `!forcerelease energy-vip`' },
+        { name: '!clearall', value: '🧹 Remove TODOS os claims ativos' }
+      );
+    }
     
     message.reply({ embeds: [helpEmbed] });
   }
