@@ -64,6 +64,10 @@ const HUNTS = {
 // Armazena os claims ativos {huntId: {user, username, channel, timestamp, endTime}}
 const activeClaims = {};
 
+// Armazena os "next" ativos {huntId: [{user, username, startTime, endTime}]}
+// Cada hunt pode ter uma fila de até 5 pessoas
+const nextQueue = {};
+
 // Função para formatar horário em Brasília (UTC-3)
 function formatBrasiliaTime(timestamp) {
   return new Date(timestamp).toLocaleTimeString('pt-BR', { 
@@ -220,11 +224,73 @@ async function checkExpiredClaims() {
       const hunt = HUNTS[huntId];
       const channel = client.channels.cache.get(claim.channel);
       
-      if (channel) {
-        channel.send(`⏰ O claim de **${hunt.name}** de <@${claim.user}> expirou! A hunt está disponível novamente! 🎉`);
-      }
+      // Verifica se há próximo na fila
+      const hasNext = nextQueue[huntId] && nextQueue[huntId].length > 0;
       
-      delete activeClaims[huntId];
+      if (hasNext) {
+        const nextPerson = nextQueue[huntId].shift(); // Remove primeiro da fila
+        
+        // Claim automático para o próximo
+        const startTime = Date.now();
+        const endTime = startTime + (hunt.duration * 60 * 1000);
+        
+        activeClaims[huntId] = {
+          user: nextPerson.user,
+          username: nextPerson.username,
+          channel: nextPerson.channel,
+          timestamp: startTime,
+          endTime: endTime
+        };
+        
+        // Recalcula fila restante
+        recalculateQueue(huntId);
+        
+        const endTimeFormatted = formatBrasiliaTime(endTime);
+        
+        if (channel) {
+          const embed = new EmbedBuilder()
+            .setColor('#00FF00')
+            .setTitle('🔔 Próximo da Fila Ativado!')
+            .setDescription(`O claim de <@${claim.user}> expirou!\n**${hunt.name}** agora é de <@${nextPerson.user}>`)
+            .addFields(
+              { name: '📍 Hunt', value: hunt.name, inline: true },
+              { name: '⏱️ Duração', value: `${hunt.duration} minutos`, inline: true },
+              { name: '🕐 Expira às', value: endTimeFormatted, inline: true }
+            )
+            .setFooter({ text: 'Horário de Brasília' })
+            .setTimestamp();
+          
+          // Mostra próximo se ainda houver fila
+          if (nextQueue[huntId] && nextQueue[huntId].length > 0) {
+            const newNext = nextQueue[huntId][0];
+            const nextStart = formatBrasiliaTime(newNext.startTime);
+            const nextEnd = formatBrasiliaTime(newNext.endTime);
+            
+            embed.addFields({
+              name: '\n🔔 PRÓXIMO NA HUNT',
+              value: `👤 <@${newNext.user}>\n🕐 **${nextStart}** até **${nextEnd}**`,
+              inline: false
+            });
+          }
+          
+          await channel.send({ embeds: [embed] });
+        }
+        
+        // Notifica o próximo
+        try {
+          const nextChannel = client.channels.cache.get(nextPerson.channel);
+          if (nextChannel) {
+            await nextChannel.send(`🔔 <@${nextPerson.user}> Sua vez em **${hunt.name}**! A hunt já está claimed para você até **${endTimeFormatted}**!`);
+          }
+        } catch (error) {
+          console.error('Erro ao notificar próximo:', error);
+        }
+      } else {
+        if (channel) {
+          channel.send(`⏰ O claim de **${hunt.name}** de <@${claim.user}> expirou! A hunt está disponível novamente! 🎉`);
+        }
+        delete activeClaims[huntId];
+      }
     }
   }
   
@@ -309,13 +375,164 @@ async function claimHunt(message, huntId) {
       { name: '⏱️ Duração', value: `${hunt.duration} minutos`, inline: true },
       { name: '🕐 Expira às', value: endTimeFormatted, inline: true }
     )
-    .setFooter({ text: `Use !release ${huntId} para liberar | !tempo ${huntId} para ver tempo restante • Horário de Brasília` })
+    .setFooter({ text: `Use !terminar ${huntId} para liberar | !tempo ${huntId} para ver tempo restante • Horário de Brasília` })
+    .setTimestamp();
+
+  // Adiciona informação de NEXT se houver
+  if (nextQueue[huntId] && nextQueue[huntId].length > 0) {
+    const nextPerson = nextQueue[huntId][0];
+    const nextStart = formatBrasiliaTime(nextPerson.startTime);
+    const nextEnd = formatBrasiliaTime(nextPerson.endTime);
+    
+    embed.addFields({
+      name: '\n🔔 PRÓXIMO NA HUNT',
+      value: `👤 <@${nextPerson.user}>\n🕐 **${nextStart}** até **${nextEnd}**`,
+      inline: false
+    });
+  }
+
+  await message.reply({ embeds: [embed] });
+  
+  // Recalcula a fila de next (caso o horário tenha mudado)
+  recalculateQueue(huntId);
+  
+  // Atualiza canal de status
+  await updateStatusChannel();
+}
+
+// Comando: !next <hunt> - Entrar na fila da hunt
+async function nextHunt(message, huntId) {
+  const hunt = HUNTS[huntId];
+  
+  if (!hunt) {
+    return message.reply(`❌ Hunt não encontrada! Use \`!hunts\` ou \`!lista\` para ver as hunts disponíveis.`);
+  }
+
+  // Verifica se a hunt está claimed
+  const claim = activeClaims[huntId];
+  if (!claim) {
+    return message.reply(`❌ **${hunt.name}** não está claimed ainda! Faça \`!claim ${huntId}\` para claimar diretamente.`);
+  }
+
+  // Verifica se o usuário já é o dono do claim atual
+  if (claim.user === message.author.id) {
+    return message.reply(`❌ Você já está com esta hunt claimed! Use \`!terminar ${huntId}\` quando terminar.`);
+  }
+
+  // Inicializa a fila se não existir
+  if (!nextQueue[huntId]) {
+    nextQueue[huntId] = [];
+  }
+
+  // Verifica se o usuário já está na fila
+  const alreadyInQueue = nextQueue[huntId].find(n => n.user === message.author.id);
+  if (alreadyInQueue) {
+    const startFormatted = formatBrasiliaTime(alreadyInQueue.startTime);
+    const endFormatted = formatBrasiliaTime(alreadyInQueue.endTime);
+    return message.reply(`❌ Você já está na fila desta hunt!\n⏰ Seu horário: **${startFormatted}** até **${endFormatted}**`);
+  }
+
+  // Verifica limite de 5 pessoas na fila
+  if (nextQueue[huntId].length >= 5) {
+    return message.reply(`❌ A fila de **${hunt.name}** está cheia! (máximo 5 pessoas)`);
+  }
+
+  // Calcula horário do next
+  let startTime;
+  if (nextQueue[huntId].length === 0) {
+    // Primeiro da fila - começa quando o claim atual terminar
+    startTime = claim.endTime;
+  } else {
+    // Próximo da fila - começa quando o anterior terminar
+    const lastInQueue = nextQueue[huntId][nextQueue[huntId].length - 1];
+    startTime = lastInQueue.endTime;
+  }
+
+  const endTime = startTime + (hunt.duration * 60 * 1000);
+
+  // Verifica se não ultrapassa 10 horas no futuro
+  const maxFutureTime = Date.now() + (10 * 60 * 60 * 1000); // 10 horas
+  if (startTime > maxFutureTime) {
+    return message.reply(`❌ Não é possível reservar! O horário ultrapassaria o limite de 10 horas no futuro.`);
+  }
+
+  // Adiciona à fila
+  nextQueue[huntId].push({
+    user: message.author.id,
+    username: message.author.username,
+    startTime: startTime,
+    endTime: endTime,
+    channel: message.channel.id
+  });
+
+  const startFormatted = formatBrasiliaTime(startTime);
+  const endFormatted = formatBrasiliaTime(endTime);
+  const position = nextQueue[huntId].length;
+
+  const embed = new EmbedBuilder()
+    .setColor('#FFD700')
+    .setTitle('✅ Next Confirmado!')
+    .setDescription(`Você entrou na fila de **${hunt.name}**`)
+    .addFields(
+      { name: '📍 Hunt', value: hunt.name, inline: true },
+      { name: '📊 Posição na Fila', value: `${position}º`, inline: true },
+      { name: '⏱️ Duração', value: `${hunt.duration} minutos`, inline: true },
+      { name: '🕐 Inicia às', value: startFormatted, inline: true },
+      { name: '🕐 Termina às', value: endFormatted, inline: true },
+      { name: '👤 Claimed por', value: `<@${message.author.id}>`, inline: true }
+    )
+    .setFooter({ text: `Use !cancelnext ${huntId} para cancelar • Horário de Brasília` })
     .setTimestamp();
 
   await message.reply({ embeds: [embed] });
   
   // Atualiza canal de status
   await updateStatusChannel();
+}
+
+// Comando: !cancelnext <hunt> - Cancelar seu next
+async function cancelNext(message, huntId) {
+  const hunt = HUNTS[huntId];
+  
+  if (!hunt) {
+    return message.reply(`❌ Hunt não encontrada!`);
+  }
+
+  if (!nextQueue[huntId] || nextQueue[huntId].length === 0) {
+    return message.reply(`❌ Não há ninguém na fila de **${hunt.name}**!`);
+  }
+
+  const userIndex = nextQueue[huntId].findIndex(n => n.user === message.author.id);
+  
+  if (userIndex === -1) {
+    return message.reply(`❌ Você não está na fila de **${hunt.name}**!`);
+  }
+
+  const removed = nextQueue[huntId].splice(userIndex, 1)[0];
+
+  // Recalcula horários da fila
+  recalculateQueue(huntId);
+
+  await message.reply(`✅ Seu next em **${hunt.name}** foi cancelado!`);
+  
+  // Atualiza canal de status
+  await updateStatusChannel();
+}
+
+// Recalcula os horários da fila após remoção
+function recalculateQueue(huntId) {
+  if (!nextQueue[huntId] || nextQueue[huntId].length === 0) return;
+
+  const claim = activeClaims[huntId];
+  const hunt = HUNTS[huntId];
+  
+  let previousEndTime = claim ? claim.endTime : Date.now();
+
+  for (let i = 0; i < nextQueue[huntId].length; i++) {
+    nextQueue[huntId][i].startTime = previousEndTime;
+    nextQueue[huntId][i].endTime = previousEndTime + (hunt.duration * 60 * 1000);
+    previousEndTime = nextQueue[huntId][i].endTime;
+  }
 }
 
 // Comando: !tempo <hunt> - Ver tempo restante
@@ -373,8 +590,69 @@ async function releaseHunt(message, huntId) {
     return message.reply(`❌ Você não pode liberar essa hunt! Ela foi claimed por <@${claim.user}>`);
   }
 
-  delete activeClaims[huntId];
-  await message.reply(`✅ **${hunt.name}** foi liberada e está disponível novamente!`);
+  // Verifica se há próximo na fila
+  const hasNext = nextQueue[huntId] && nextQueue[huntId].length > 0;
+  
+  if (hasNext) {
+    const nextPerson = nextQueue[huntId].shift(); // Remove primeiro da fila
+    
+    // Claim automático para o próximo
+    const startTime = Date.now();
+    const endTime = startTime + (hunt.duration * 60 * 1000);
+    
+    activeClaims[huntId] = {
+      user: nextPerson.user,
+      username: nextPerson.username,
+      channel: nextPerson.channel,
+      timestamp: startTime,
+      endTime: endTime
+    };
+    
+    // Recalcula fila restante
+    recalculateQueue(huntId);
+    
+    const endTimeFormatted = formatBrasiliaTime(endTime);
+    
+    const embed = new EmbedBuilder()
+      .setColor('#00FF00')
+      .setTitle('🔔 Próximo da Fila Ativado!')
+      .setDescription(`<@${message.author.id}> terminou!\n**${hunt.name}** agora é de <@${nextPerson.user}>`)
+      .addFields(
+        { name: '📍 Hunt', value: hunt.name, inline: true },
+        { name: '⏱️ Duração', value: `${hunt.duration} minutos`, inline: true },
+        { name: '🕐 Expira às', value: endTimeFormatted, inline: true }
+      )
+      .setFooter({ text: 'Horário de Brasília' })
+      .setTimestamp();
+    
+    // Mostra próximo se ainda houver fila
+    if (nextQueue[huntId] && nextQueue[huntId].length > 0) {
+      const newNext = nextQueue[huntId][0];
+      const nextStart = formatBrasiliaTime(newNext.startTime);
+      const nextEnd = formatBrasiliaTime(newNext.endTime);
+      
+      embed.addFields({
+        name: '\n🔔 PRÓXIMO NA HUNT',
+        value: `👤 <@${newNext.user}>\n🕐 **${nextStart}** até **${nextEnd}**`,
+        inline: false
+      });
+    }
+    
+    await message.reply({ embeds: [embed] });
+    
+    // Notifica o próximo
+    try {
+      const nextChannel = client.channels.cache.get(nextPerson.channel);
+      if (nextChannel) {
+        await nextChannel.send(`🔔 <@${nextPerson.user}> Sua vez em **${hunt.name}**! A hunt já está claimed para você até **${endTimeFormatted}**!`);
+      }
+    } catch (error) {
+      console.error('Erro ao notificar próximo:', error);
+    }
+  } else {
+    delete activeClaims[huntId];
+    await message.reply(`✅ **${hunt.name}** foi liberada e está disponível novamente!`);
+  }
   
   // Atualiza canal de status
   await updateStatusChannel();
@@ -523,22 +801,26 @@ client.on('messageCreate', async message => {
   const args = content.split(' ');
   const command = args[0];
 
-  if (command === '!hunts') {
+  if (command === '!claim' && args[1]) {
+    await claimHunt(message, args[1]);
+  } else if (command === '!next' && args[1]) {
+    await nextHunt(message, args[1]);
+  } else if (command === '!cancelnext' && args[1]) {
+    await cancelNext(message, args[1]);
+  } else if (command === '!terminar' && args[1]) {
+    await releaseHunt(message, args[1]);
+  } else if (command === '!tempo' && args[1]) {
+    checkTime(message, args[1]);
+  } else if (command === '!status') {
+    showStatus(message);
+  } else if (command === '!hunts') {
     listHunts(message);
   } else if (command === '!lista') {
     simpleList(message);
-  } else if (command === '!claim' && args[1]) {
-    await claimHunt(message, args[1]);
-  } else if (command === '!tempo' && args[1]) {
-    checkTime(message, args[1]);
-  } else if (command === '!release' && args[1]) {
-    await releaseHunt(message, args[1]);
-  } else if (command === '!forcerelease' && args[1]) {
+  } else if (command === '!terminoja' && args[1]) {
     await forceReleaseHunt(message, args[1]);
-  } else if (command === '!clearall') {
+  } else if (command === '!limparclaims') {
     await clearAllClaims(message);
-  } else if (command === '!status') {
-    showStatus(message);
   } else if (command === '!criar-status') {
     // Comando para criar manualmente o canal de status
     const channel = await getOrCreateStatusChannel(message.guild);
@@ -552,14 +834,16 @@ client.on('messageCreate', async message => {
     const helpEmbed = new EmbedBuilder()
       .setColor('#FFD700')
       .setTitle('📖 Comandos do Bot - Tibia Hunt Manager')
-      .setDescription('Sistema de gerenciamento de claims para hunts\n**Tempo por hunt: 2 horas (120 minutos)**')
+      .setDescription('Sistema de gerenciamento de claims para hunts\n**Tempo por hunt: 2 horas (120 minutos)**\n**Sistema de Fila: até 10 horas no futuro**')
       .addFields(
+        { name: '!claim <hunt>', value: 'Faz claim de uma hunt por 2h\nEx: `!claim energy-vip`' },
+        { name: '!next <hunt>', value: '🔔 Entra na fila da hunt\nEx: `!next energy-vip`' },
+        { name: '!cancelnext <hunt>', value: 'Cancela seu next na fila\nEx: `!cancelnext energy-vip`' },
+        { name: '!terminar <hunt>', value: 'Termina sua hunt claimed\nEx: `!terminar energy-vip`' },
+        { name: '!tempo <hunt>', value: 'Verifica tempo restante de uma hunt\nEx: `!tempo energy-vip`' },
+        { name: '!status', value: 'Mostra todos os claims ativos com tempos' },
         { name: '!hunts', value: 'Lista todas as hunts organizadas por categoria' },
         { name: '!lista', value: 'Lista simplificada de hunts disponíveis/claimed' },
-        { name: '!claim <hunt>', value: 'Faz claim de uma hunt por 2h\nEx: `!claim energy-vip`' },
-        { name: '!tempo <hunt>', value: 'Verifica tempo restante de uma hunt\nEx: `!tempo energy-vip`' },
-        { name: '!release <hunt>', value: 'Libera sua hunt claimed\nEx: `!release energy-vip`' },
-        { name: '!status', value: 'Mostra todos os claims ativos com tempos' },
         { name: '!criar-status', value: 'Cria canal #📊-hunt-status (automático)' },
         { name: '!help ou !ajuda', value: 'Mostra esta mensagem' }
       )
@@ -570,8 +854,8 @@ client.on('messageCreate', async message => {
     if (isUserAdmin) {
       helpEmbed.addFields(
         { name: '\n🛡️ **COMANDOS ADMIN**', value: '━━━━━━━━━━━━━━━━━━━━' },
-        { name: '!forcerelease <hunt>', value: '🔨 Remove claim de qualquer hunt\nEx: `!forcerelease energy-vip`' },
-        { name: '!clearall', value: '🧹 Remove TODOS os claims ativos' }
+        { name: '!terminoja <hunt>', value: '🔨 Remove claim de qualquer hunt\nEx: `!terminoja energy-vip`' },
+        { name: '!limparclaims', value: '🧹 Remove TODOS os claims ativos' }
       );
     }
     
