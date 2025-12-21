@@ -30,6 +30,10 @@ const HUNTS = {
   'fire-vip': { name: 'Fire VIP', category: 'Fire', duration: 120 },
   'fire-free': { name: 'Fire FREE', category: 'Fire', duration: 120 },
   
+  // INFERNIAK
+  'inferniak-1': { name: 'INFERNIAK 1', category: 'INFERNIAK', duration: 120 },
+  'inferniak-m1': { name: 'INFERNIAK M1', category: 'INFERNIAK', duration: 120 },
+  
   // OUTRAS VIP
   'elfo-vip': { name: 'Elfo VIP', category: 'VIP', duration: 120 },
   'falcon-vip': { name: 'Falcon VIP', category: 'VIP', duration: 120 },
@@ -186,7 +190,7 @@ async function updateStatusChannel() {
     });
 
     const embed = new EmbedBuilder()
-      .setColor(category === 'HARD' ? '#FF0000' : category === 'VIP' ? '#FFD700' : '#00FF00')
+      .setColor(category === 'HARD' ? '#FF0000' : category === 'VIP' ? '#FFD700' : category === 'INFERNIAK' ? '#FF6600' : '#00FF00')
       .setTitle(`📍 ${category}`)
       .setDescription(description || 'Nenhum claim ativo')
       .setFooter({ text: '🕐 Horário de Brasília (UTC-3) • Atualiza a cada minuto' })
@@ -262,13 +266,16 @@ async function checkExpiredClaims() {
           
           // Mostra próximo se ainda houver fila
           if (nextQueue[huntId] && nextQueue[huntId].length > 0) {
-            const newNext = nextQueue[huntId][0];
-            const nextStart = formatBrasiliaTime(newNext.startTime);
-            const nextEnd = formatBrasiliaTime(newNext.endTime);
+            let queueText = '';
+            nextQueue[huntId].forEach((next, index) => {
+              const nextStart = formatBrasiliaTime(next.startTime);
+              const nextEnd = formatBrasiliaTime(next.endTime);
+              queueText += `**Fila ${index + 1}:** <@${next.user}> | 🕐 ${nextStart}-${nextEnd}\n`;
+            });
             
             embed.addFields({
-              name: '\n🔔 PRÓXIMO NA HUNT',
-              value: `👤 <@${newNext.user}>\n🕐 **${nextStart}** até **${nextEnd}**`,
+              name: '\n🔔 PRÓXIMOS NA FILA',
+              value: queueText,
               inline: false
             });
           }
@@ -323,7 +330,7 @@ function listHunts(message) {
       if (claim) {
         const time = getTimeRemainingDetailed(claim.endTime);
         const endTime = formatBrasiliaTime(claim.endTime);
-        description += `   👤 ${claim.username} | ⏰ ${time} | 🕐 ${endTime}\n`;
+        description += `   👤 <@${claim.user}> | ⏰ ${time} | 🕐 ${endTime}\n`;
         
         // Mostra fila de next se houver
         if (nextQueue[id] && nextQueue[id].length > 0) {
@@ -331,7 +338,7 @@ function listHunts(message) {
           nextQueue[id].forEach((next, index) => {
             const nextStart = formatBrasiliaTime(next.startTime);
             const nextEnd = formatBrasiliaTime(next.endTime);
-            description += `      ${index + 1}º ${next.username} | 🕐 ${nextStart}-${nextEnd}\n`;
+            description += `      **Fila ${index + 1}:** <@${next.user}> | 🕐 ${nextStart}-${nextEnd}\n`;
           });
         }
       }
@@ -339,7 +346,7 @@ function listHunts(message) {
     });
 
     const embed = new EmbedBuilder()
-      .setColor(category === 'HARD' ? '#FF0000' : category === 'VIP' ? '#FFD700' : '#00FF00')
+      .setColor(category === 'HARD' ? '#FF0000' : category === 'VIP' ? '#FFD700' : category === 'INFERNIAK' ? '#FF6600' : '#00FF00')
       .setTitle(`📍 ${category}`)
       .setDescription(description)
       .setFooter({ text: 'Use !claim <hunt> para claimar | !next <hunt> para entrar na fila' })
@@ -393,13 +400,16 @@ async function claimHunt(message, huntId) {
 
   // Adiciona informação de NEXT se houver
   if (nextQueue[huntId] && nextQueue[huntId].length > 0) {
-    const nextPerson = nextQueue[huntId][0];
-    const nextStart = formatBrasiliaTime(nextPerson.startTime);
-    const nextEnd = formatBrasiliaTime(nextPerson.endTime);
+    let queueText = '';
+    nextQueue[huntId].forEach((next, index) => {
+      const nextStart = formatBrasiliaTime(next.startTime);
+      const nextEnd = formatBrasiliaTime(next.endTime);
+      queueText += `**Fila ${index + 1}:** <@${next.user}> | 🕐 ${nextStart}-${nextEnd}\n`;
+    });
     
     embed.addFields({
-      name: '\n🔔 PRÓXIMO NA HUNT',
-      value: `👤 <@${nextPerson.user}>\n🕐 **${nextStart}** até **${nextEnd}**`,
+      name: '\n🔔 PRÓXIMOS NA FILA',
+      value: queueText,
       inline: false
     });
   }
@@ -488,7 +498,7 @@ async function nextHunt(message, huntId) {
     .setDescription(`Você entrou na fila de **${hunt.name}**`)
     .addFields(
       { name: '📍 Hunt', value: hunt.name, inline: true },
-      { name: '📊 Posição na Fila', value: `${position}º`, inline: true },
+      { name: '📊 Posição na Fila', value: `Fila ${position}`, inline: true },
       { name: '⏱️ Duração', value: `${hunt.duration} minutos`, inline: true },
       { name: '🕐 Inicia às', value: startFormatted, inline: true },
       { name: '🕐 Termina às', value: endFormatted, inline: true },
@@ -640,13 +650,16 @@ async function releaseHunt(message, huntId) {
     
     // Mostra próximo se ainda houver fila
     if (nextQueue[huntId] && nextQueue[huntId].length > 0) {
-      const newNext = nextQueue[huntId][0];
-      const nextStart = formatBrasiliaTime(newNext.startTime);
-      const nextEnd = formatBrasiliaTime(newNext.endTime);
+      let queueText = '';
+      nextQueue[huntId].forEach((next, index) => {
+        const nextStart = formatBrasiliaTime(next.startTime);
+        const nextEnd = formatBrasiliaTime(next.endTime);
+        queueText += `**Fila ${index + 1}:** <@${next.user}> | 🕐 ${nextStart}-${nextEnd}\n`;
+      });
       
       embed.addFields({
-        name: '\n🔔 PRÓXIMO NA HUNT',
-        value: `👤 <@${newNext.user}>\n🕐 **${nextStart}** até **${nextEnd}**`,
+        name: '\n🔔 PRÓXIMOS NA FILA',
+        value: queueText,
         inline: false
       });
     }
@@ -803,13 +816,12 @@ function simpleList(message) {
       
       // Mostra fila de next se houver
       if (nextQueue[id] && nextQueue[id].length > 0) {
-        claimed += `   🔔 **Fila (${nextQueue[id].length}):** `;
-        const queueNames = nextQueue[id].map((next, index) => {
+        claimed += `   🔔 **Fila (${nextQueue[id].length}):**\n`;
+        nextQueue[id].forEach((next, index) => {
           const nextStart = formatBrasiliaTime(next.startTime);
           const nextEnd = formatBrasiliaTime(next.endTime);
-          return `${index + 1}º ${next.username} (${nextStart}-${nextEnd})`;
-        }).join(', ');
-        claimed += queueNames + '\n';
+          claimed += `      **Fila ${index + 1}:** <@${next.user}> | 🕐 ${nextStart}-${nextEnd}\n`;
+        });
       }
       claimed += '\n';
     } else {
@@ -859,7 +871,7 @@ function showQueue(message, huntId) {
     nextQueue[huntId].forEach((next, index) => {
       const nextStart = formatBrasiliaTime(next.startTime);
       const nextEnd = formatBrasiliaTime(next.endTime);
-      description += `${index + 1}º 👤 <@${next.user}> (${next.username})\n`;
+      description += `**Fila ${index + 1}:** 👤 <@${next.user}> (${next.username})\n`;
       description += `   🕐 ${nextStart} até ${nextEnd}\n`;
     });
   } else {
@@ -918,12 +930,12 @@ client.on('messageCreate', async message => {
       .setTitle('📖 Comandos do Bot - Tibia Hunt Manager')
       .setDescription('Sistema de gerenciamento de claims para hunts\n**Tempo por hunt: 2 horas (120 minutos)**\n**Sistema de Fila: até 10 horas no futuro**')
       .addFields(
-        { name: '!claim <hunt>', value: 'Faz claim de uma hunt por 2h\nEx: `!claim energy-vip`' },
-        { name: '!next <hunt>', value: '🔔 Entra na fila da hunt\nEx: `!next energy-vip`' },
-        { name: '!cancelnext <hunt>', value: 'Cancela seu next na fila\nEx: `!cancelnext energy-vip`' },
-        { name: '!fila <hunt>', value: '📋 Mostra a fila completa da hunt\nEx: `!fila energy-vip`' },
-        { name: '!terminar <hunt>', value: 'Termina sua hunt claimed\nEx: `!terminar energy-vip`' },
-        { name: '!tempo <hunt>', value: 'Verifica tempo restante de uma hunt\nEx: `!tempo energy-vip`' },
+        { name: '!claim <hunt>', value: 'Faz claim de uma hunt por 2h\nEx: `!claim inferniak-1`' },
+        { name: '!next <hunt>', value: '🔔 Entra na fila da hunt\nEx: `!next inferniak-1`' },
+        { name: '!cancelnext <hunt>', value: 'Cancela seu next na fila\nEx: `!cancelnext inferniak-1`' },
+        { name: '!fila <hunt>', value: '📋 Mostra a fila completa da hunt\nEx: `!fila inferniak-1`' },
+        { name: '!terminar <hunt>', value: 'Termina sua hunt claimed\nEx: `!terminar inferniak-1`' },
+        { name: '!tempo <hunt>', value: 'Verifica tempo restante de uma hunt\nEx: `!tempo inferniak-1`' },
         { name: '!status', value: 'Mostra todos os claims ativos com tempos' },
         { name: '!hunts', value: 'Lista todas as hunts com filas organizadas' },
         { name: '!lista', value: 'Lista simplificada com filas' },
@@ -937,7 +949,7 @@ client.on('messageCreate', async message => {
     if (isUserAdmin) {
       helpEmbed.addFields(
         { name: '\n🛡️ **COMANDOS ADMIN**', value: '━━━━━━━━━━━━━━━━━━━━' },
-        { name: '!terminoja <hunt>', value: '🔨 Remove claim de qualquer hunt\nEx: `!terminoja energy-vip`' },
+        { name: '!terminoja <hunt>', value: '🔨 Remove claim de qualquer hunt\nEx: `!terminoja inferniak-1`' },
         { name: '!limparclaims', value: '🧹 Remove TODOS os claims ativos' }
       );
     }
