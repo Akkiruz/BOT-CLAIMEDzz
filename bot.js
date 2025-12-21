@@ -753,6 +753,66 @@ async function clearAllClaims(message) {
   await updateStatusChannel();
 }
 
+// Comando: !limpasala - Limpar todas as mensagens do canal (ADMIN)
+async function clearChannel(message) {
+  if (!isAdmin(message)) {
+    return message.reply(`❌ Este comando é apenas para administradores!`);
+  }
+
+  try {
+    // Envia mensagem de confirmação
+    const confirmMsg = await message.reply('🧹 Limpando canal... Isso pode levar alguns segundos.');
+    
+    let totalDeleted = 0;
+    let fetched;
+    
+    // Deleta mensagens em lotes de 100 (limite do Discord)
+    do {
+      fetched = await message.channel.messages.fetch({ limit: 100 });
+      
+      if (fetched.size === 0) break;
+      
+      // Separa mensagens por idade (Discord só permite deletar mensagens com menos de 14 dias em bulk)
+      const recentMessages = fetched.filter(msg => Date.now() - msg.createdTimestamp < 1209600000); // 14 dias em ms
+      const oldMessages = fetched.filter(msg => Date.now() - msg.createdTimestamp >= 1209600000);
+      
+      // Deleta mensagens recentes em bulk
+      if (recentMessages.size > 0) {
+        await message.channel.bulkDelete(recentMessages, true);
+        totalDeleted += recentMessages.size;
+      }
+      
+      // Deleta mensagens antigas uma por uma
+      for (const [id, msg] of oldMessages) {
+        try {
+          await msg.delete();
+          totalDeleted++;
+          // Pequeno delay para evitar rate limit
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        } catch (err) {
+          console.error('Erro ao deletar mensagem antiga:', err);
+        }
+      }
+      
+      // Pequeno delay entre lotes
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+    } while (fetched.size >= 2);
+    
+    // Envia mensagem final que se auto-deleta
+    const finalMsg = await message.channel.send(`✅ Canal limpo! **${totalDeleted} mensagens** foram deletadas por ${message.author.username}.`);
+    
+    // Deleta a mensagem após 5 segundos
+    setTimeout(() => {
+      finalMsg.delete().catch(() => {});
+    }, 5000);
+    
+  } catch (error) {
+    console.error('Erro ao limpar canal:', error);
+    message.reply('❌ Erro ao limpar o canal. Verifique se o bot tem permissões de "Gerenciar Mensagens".');
+  }
+}
+
 // Comando: !status - Ver todos os claims ativos
 function showStatus(message) {
   const embed = new EmbedBuilder()
