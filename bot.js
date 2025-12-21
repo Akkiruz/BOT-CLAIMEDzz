@@ -34,6 +34,19 @@ const HUNTS = {
   'inferniak-1': { name: 'INFERNIAK 1', category: 'INFERNIAK', duration: 120 },
   'inferniak-m1': { name: 'INFERNIAK M1', category: 'INFERNIAK', duration: 120 },
   
+  // WARZONE (11 vagas)
+  'warzone-1': { name: 'WARZONE 1', category: 'WARZONE', duration: 120 },
+  'warzone-2': { name: 'WARZONE 2', category: 'WARZONE', duration: 120 },
+  'warzone-3': { name: 'WARZONE 3', category: 'WARZONE', duration: 120 },
+  'warzone-4': { name: 'WARZONE 4', category: 'WARZONE', duration: 120 },
+  'warzone-5': { name: 'WARZONE 5', category: 'WARZONE', duration: 120 },
+  'warzone-6': { name: 'WARZONE 6', category: 'WARZONE', duration: 120 },
+  'warzone-7': { name: 'WARZONE 7', category: 'WARZONE', duration: 120 },
+  'warzone-8': { name: 'WARZONE 8', category: 'WARZONE', duration: 120 },
+  'warzone-9': { name: 'WARZONE 9', category: 'WARZONE', duration: 120 },
+  'warzone-10': { name: 'WARZONE 10', category: 'WARZONE', duration: 120 },
+  'warzone-11': { name: 'WARZONE 11', category: 'WARZONE', duration: 120 },
+  
   // OUTRAS VIP
   'elfo-vip': { name: 'Elfo VIP', category: 'VIP', duration: 120 },
   'falcon-vip': { name: 'Falcon VIP', category: 'VIP', duration: 120 },
@@ -190,7 +203,7 @@ async function updateStatusChannel() {
     });
 
     const embed = new EmbedBuilder()
-      .setColor(category === 'HARD' ? '#FF0000' : category === 'VIP' ? '#FFD700' : category === 'INFERNIAK' ? '#FF6600' : '#00FF00')
+      .setColor(category === 'HARD' ? '#FF0000' : category === 'VIP' ? '#FFD700' : category === 'INFERNIAK' ? '#FF6600' : category === 'WARZONE' ? '#8B00FF' : '#00FF00')
       .setTitle(`📍 ${category}`)
       .setDescription(description || 'Nenhum claim ativo')
       .setFooter({ text: '🕐 Horário de Brasília (UTC-3) • Atualiza a cada minuto' })
@@ -346,7 +359,7 @@ function listHunts(message) {
     });
 
     const embed = new EmbedBuilder()
-      .setColor(category === 'HARD' ? '#FF0000' : category === 'VIP' ? '#FFD700' : category === 'INFERNIAK' ? '#FF6600' : '#00FF00')
+      .setColor(category === 'HARD' ? '#FF0000' : category === 'VIP' ? '#FFD700' : category === 'INFERNIAK' ? '#FF6600' : category === 'WARZONE' ? '#8B00FF' : '#00FF00')
       .setTitle(`📍 ${category}`)
       .setDescription(description)
       .setFooter({ text: 'Use !claim <hunt> para claimar | !next <hunt> para entrar na fila' })
