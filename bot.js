@@ -319,17 +319,30 @@ function listHunts(message) {
     
     hunts.forEach(({ id, hunt, status, claim }) => {
       description += `${status} **${hunt.name}** (\`${id}\`)\n`;
+      
       if (claim) {
         const time = getTimeRemainingDetailed(claim.endTime);
-        description += `   👤 ${claim.username} | ⏰ ${time}\n`;
+        const endTime = formatBrasiliaTime(claim.endTime);
+        description += `   👤 ${claim.username} | ⏰ ${time} | 🕐 ${endTime}\n`;
+        
+        // Mostra fila de next se houver
+        if (nextQueue[id] && nextQueue[id].length > 0) {
+          description += `   🔔 **FILA (${nextQueue[id].length}):**\n`;
+          nextQueue[id].forEach((next, index) => {
+            const nextStart = formatBrasiliaTime(next.startTime);
+            const nextEnd = formatBrasiliaTime(next.endTime);
+            description += `      ${index + 1}º ${next.username} | 🕐 ${nextStart}-${nextEnd}\n`;
+          });
+        }
       }
+      description += '\n';
     });
 
     const embed = new EmbedBuilder()
       .setColor(category === 'HARD' ? '#FF0000' : category === 'VIP' ? '#FFD700' : '#00FF00')
       .setTitle(`📍 ${category}`)
       .setDescription(description)
-      .setFooter({ text: 'Use !claim <hunt> para fazer claim' })
+      .setFooter({ text: 'Use !claim <hunt> para claimar | !next <hunt> para entrar na fila' })
       .setTimestamp();
 
     message.channel.send({ embeds: [embed] });
@@ -778,19 +791,86 @@ function getTimeRemainingDetailed(endTime) {
 
 // Comando !lista - Lista simplificada
 function simpleList(message) {
-  let available = '**🟢 Disponíveis:**\n';
-  let claimed = '\n**🔴 Claimed:**\n';
+  let available = '**🟢 DISPONÍVEIS:**\n';
+  let claimed = '\n**🔴 CLAIMED:**\n';
   
   for (const [id, hunt] of Object.entries(HUNTS)) {
     if (activeClaims[id]) {
       const time = getTimeRemainingDetailed(activeClaims[id].endTime);
-      claimed += `❌ ${hunt.name} - <@${activeClaims[id].user}> (${time})\n`;
+      const endTime = formatBrasiliaTime(activeClaims[id].endTime);
+      claimed += `❌ **${hunt.name}**\n`;
+      claimed += `   👤 <@${activeClaims[id].user}> | ⏰ ${time} | 🕐 ${endTime}\n`;
+      
+      // Mostra fila de next se houver
+      if (nextQueue[id] && nextQueue[id].length > 0) {
+        claimed += `   🔔 **Fila (${nextQueue[id].length}):** `;
+        const queueNames = nextQueue[id].map((next, index) => {
+          const nextStart = formatBrasiliaTime(next.startTime);
+          const nextEnd = formatBrasiliaTime(next.endTime);
+          return `${index + 1}º ${next.username} (${nextStart}-${nextEnd})`;
+        }).join(', ');
+        claimed += queueNames + '\n';
+      }
+      claimed += '\n';
     } else {
       available += `✅ ${hunt.name} (\`${id}\`)\n`;
     }
   }
 
-  message.reply(available + claimed);
+  // Separa em mensagens se for muito longo
+  if ((available + claimed).length > 2000) {
+    message.reply(available);
+    message.channel.send(claimed);
+  } else {
+    message.reply(available + claimed);
+  }
+}
+
+// Comando !fila <hunt> - Ver fila detalhada de uma hunt
+function showQueue(message, huntId) {
+  const hunt = HUNTS[huntId];
+  
+  if (!hunt) {
+    return message.reply(`❌ Hunt não encontrada!`);
+  }
+
+  const claim = activeClaims[huntId];
+  
+  if (!claim) {
+    return message.reply(`❌ **${hunt.name}** não está claimed! Não há fila.`);
+  }
+
+  const embed = new EmbedBuilder()
+    .setColor('#0099FF')
+    .setTitle(`📋 Fila de ${hunt.name}`)
+    .setTimestamp();
+
+  // Mostra claim atual
+  const timeRemaining = getTimeRemainingDetailed(claim.endTime);
+  const endTime = formatBrasiliaTime(claim.endTime);
+  
+  let description = `**🔴 CLAIM ATUAL:**\n`;
+  description += `👤 <@${claim.user}> (${claim.username})\n`;
+  description += `⏰ ${timeRemaining} | 🕐 Termina: ${endTime}\n\n`;
+
+  // Mostra fila
+  if (nextQueue[huntId] && nextQueue[huntId].length > 0) {
+    description += `**🔔 FILA (${nextQueue[huntId].length}/5):**\n`;
+    nextQueue[huntId].forEach((next, index) => {
+      const nextStart = formatBrasiliaTime(next.startTime);
+      const nextEnd = formatBrasiliaTime(next.endTime);
+      description += `${index + 1}º 👤 <@${next.user}> (${next.username})\n`;
+      description += `   🕐 ${nextStart} até ${nextEnd}\n`;
+    });
+  } else {
+    description += `**🔔 FILA:** Vazia\n`;
+    description += `Use \`!next ${huntId}\` para entrar na fila!`;
+  }
+
+  embed.setDescription(description);
+  embed.setFooter({ text: 'Horário de Brasília (UTC-3)' });
+
+  message.reply({ embeds: [embed] });
 }
 
 // Processa mensagens
@@ -817,6 +897,8 @@ client.on('messageCreate', async message => {
     listHunts(message);
   } else if (command === '!lista') {
     simpleList(message);
+  } else if (command === '!fila' && args[1]) {
+    showQueue(message, args[1]);
   } else if (command === '!terminoja' && args[1]) {
     await forceReleaseHunt(message, args[1]);
   } else if (command === '!limparclaims') {
@@ -839,11 +921,12 @@ client.on('messageCreate', async message => {
         { name: '!claim <hunt>', value: 'Faz claim de uma hunt por 2h\nEx: `!claim energy-vip`' },
         { name: '!next <hunt>', value: '🔔 Entra na fila da hunt\nEx: `!next energy-vip`' },
         { name: '!cancelnext <hunt>', value: 'Cancela seu next na fila\nEx: `!cancelnext energy-vip`' },
+        { name: '!fila <hunt>', value: '📋 Mostra a fila completa da hunt\nEx: `!fila energy-vip`' },
         { name: '!terminar <hunt>', value: 'Termina sua hunt claimed\nEx: `!terminar energy-vip`' },
         { name: '!tempo <hunt>', value: 'Verifica tempo restante de uma hunt\nEx: `!tempo energy-vip`' },
         { name: '!status', value: 'Mostra todos os claims ativos com tempos' },
-        { name: '!hunts', value: 'Lista todas as hunts organizadas por categoria' },
-        { name: '!lista', value: 'Lista simplificada de hunts disponíveis/claimed' },
+        { name: '!hunts', value: 'Lista todas as hunts com filas organizadas' },
+        { name: '!lista', value: 'Lista simplificada com filas' },
         { name: '!criar-status', value: 'Cria canal #📊-hunt-status (automático)' },
         { name: '!help ou !ajuda', value: 'Mostra esta mensagem' }
       )
