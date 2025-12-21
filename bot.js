@@ -760,56 +760,87 @@ async function clearChannel(message) {
   }
 
   try {
-    // Envia mensagem de confirmação
-    const confirmMsg = await message.reply('🧹 Limpando canal... Isso pode levar alguns segundos.');
-    
     let totalDeleted = 0;
-    let fetched;
+    let hasMore = true;
     
-    // Deleta mensagens em lotes de 100 (limite do Discord)
-    do {
-      fetched = await message.channel.messages.fetch({ limit: 100 });
+    await message.reply('🧹 Iniciando limpeza do canal...');
+    
+    // Loop para deletar todas as mensagens
+    while (hasMore) {
+      // Busca até 100 mensagens (limite da API)
+      const fetched = await message.channel.messages.fetch({ limit: 100 });
       
-      if (fetched.size === 0) break;
-      
-      // Separa mensagens por idade (Discord só permite deletar mensagens com menos de 14 dias em bulk)
-      const recentMessages = fetched.filter(msg => Date.now() - msg.createdTimestamp < 1209600000); // 14 dias em ms
-      const oldMessages = fetched.filter(msg => Date.now() - msg.createdTimestamp >= 1209600000);
-      
-      // Deleta mensagens recentes em bulk
-      if (recentMessages.size > 0) {
-        await message.channel.bulkDelete(recentMessages, true);
-        totalDeleted += recentMessages.size;
+      if (fetched.size === 0) {
+        hasMore = false;
+        break;
       }
       
-      // Deleta mensagens antigas uma por uma
-      for (const [id, msg] of oldMessages) {
+      // Filtra mensagens com menos de 14 dias (podem ser deletadas em bulk)
+      const recentMessages = fetched.filter(msg => {
+        const age = Date.now() - msg.createdTimestamp;
+        return age < 1209600000; // 14 dias em milissegundos
+      });
+      
+      if (recentMessages.size > 1) {
+        // Deleta em bulk (mínimo 2 mensagens)
         try {
-          await msg.delete();
-          totalDeleted++;
-          // Pequeno delay para evitar rate limit
-          await new Promise(resolve => setTimeout(resolve, 1000));
+          await message.channel.bulkDelete(recentMessages, true);
+          totalDeleted += recentMessages.size;
+          console.log(`Deletadas ${recentMessages.size} mensagens em bulk`);
         } catch (err) {
-          console.error('Erro ao deletar mensagem antiga:', err);
+          console.error('Erro no bulkDelete:', err);
         }
+      } else if (recentMessages.size === 1) {
+        // Se só tem 1 mensagem, deleta individualmente
+        try {
+          await recentMessages.first().delete();
+          totalDeleted++;
+        } catch (err) {
+          console.error('Erro ao deletar mensagem única:', err);
+        }
+      }
+      
+      // Verifica se há mensagens antigas (mais de 14 dias)
+      const oldMessages = fetched.filter(msg => {
+        const age = Date.now() - msg.createdTimestamp;
+        return age >= 1209600000;
+      });
+      
+      // Deleta mensagens antigas uma por uma
+      if (oldMessages.size > 0) {
+        for (const [id, msg] of oldMessages) {
+          try {
+            await msg.delete();
+            totalDeleted++;
+            console.log(`Deletada mensagem antiga: ${id}`);
+            // Delay para evitar rate limit
+            await new Promise(resolve => setTimeout(resolve, 1500));
+          } catch (err) {
+            console.error('Erro ao deletar mensagem antiga:', err);
+          }
+        }
+      }
+      
+      // Se deletou menos de 100 mensagens, provavelmente acabou
+      if (fetched.size < 100) {
+        hasMore = false;
       }
       
       // Pequeno delay entre lotes
       await new Promise(resolve => setTimeout(resolve, 1000));
-      
-    } while (fetched.size >= 2);
+    }
     
-    // Envia mensagem final que se auto-deleta
-    const finalMsg = await message.channel.send(`✅ Canal limpo! **${totalDeleted} mensagens** foram deletadas por ${message.author.username}.`);
+    // Mensagem final
+    const finalMsg = await message.channel.send(`✅ **Canal limpo!**\n🗑️ ${totalDeleted} mensagens deletadas\n👤 Por: ${message.author.username}`);
     
-    // Deleta a mensagem após 5 segundos
+    // Auto-deleta após 10 segundos
     setTimeout(() => {
       finalMsg.delete().catch(() => {});
-    }, 5000);
+    }, 10000);
     
   } catch (error) {
     console.error('Erro ao limpar canal:', error);
-    message.reply('❌ Erro ao limpar o canal. Verifique se o bot tem permissões de "Gerenciar Mensagens".');
+    message.channel.send('❌ Erro ao limpar o canal. Verifique se o bot tem permissão de **"Gerenciar Mensagens"**!').catch(() => {});
   }
 }
 
@@ -975,6 +1006,18 @@ client.on('messageCreate', async message => {
     await forceReleaseHunt(message, args[1]);
   } else if (command === '!limparclaims') {
     await clearAllClaims(message);
+  } else if (command === '!limpasala') {
+    await clearChannel(message);
+  } else if (command === '!testeadmin') {
+    // Comando de teste para verificar permissões
+    const isUserAdmin = isAdmin(message);
+    const botPerms = message.guild.members.cache.get(client.user.id).permissions;
+    
+    message.reply(`**Diagnóstico:**
+👤 Você é admin? ${isUserAdmin ? '✅ SIM' : '❌ NÃO'}
+🤖 Bot é admin? ${botPerms.has(PermissionFlagsBits.Administrator) ? '✅ SIM' : '❌ NÃO'}
+🗑️ Bot pode gerenciar mensagens? ${botPerms.has(PermissionFlagsBits.ManageMessages) ? '✅ SIM' : '❌ NÃO'}
+📝 Bot pode ler mensagens? ${botPerms.has(PermissionFlagsBits.ReadMessageHistory) ? '✅ SIM' : '❌ NÃO'}`);
   } else if (command === '!criar-status') {
     // Comando para criar manualmente o canal de status
     const channel = await getOrCreateStatusChannel(message.guild);
@@ -1010,7 +1053,8 @@ client.on('messageCreate', async message => {
       helpEmbed.addFields(
         { name: '\n🛡️ **COMANDOS ADMIN**', value: '━━━━━━━━━━━━━━━━━━━━' },
         { name: '!terminoja <hunt>', value: '🔨 Remove claim de qualquer hunt\nEx: `!terminoja inferniak-1`' },
-        { name: '!limparclaims', value: '🧹 Remove TODOS os claims ativos' }
+        { name: '!limparclaims', value: '🧹 Remove TODOS os claims ativos' },
+        { name: '!limpasala', value: '🗑️ Deleta TODAS as mensagens do canal' }
       );
     }
     
