@@ -1,3 +1,6 @@
+// ==================== PARTE 1/3 - INÍCIO ====================
+// Cole esta parte primeiro e continue com a parte 2
+
 const { Client, GatewayIntentBits, EmbedBuilder, ChannelType, PermissionFlagsBits } = require('discord.js');
 
 // CONFIGURAÇÃO - Lê o token da variável de ambiente
@@ -85,6 +88,8 @@ const HUNTS = {
 const activeClaims = {};
 const nextQueue = {};
 const pendingDurationSelection = {};
+const pendingConfirmations = {}; // Sistema de confirmação
+const notificationIntervals = {}; // Intervalos de notificação
 
 // Emojis para as reações
 const DURATION_EMOJIS = {
@@ -373,66 +378,53 @@ async function checkExpiredClaims() {
     if (now >= claim.endTime) {
       const hunt = HUNTS[huntId];
       const channel = client.channels.cache.get(claim.channel);
-      
       const hasNext = nextQueue[huntId] && nextQueue[huntId].length > 0;
       
       if (hasNext) {
-        const nextPerson = nextQueue[huntId].shift();
+        const nextPerson = nextQueue[huntId][0];
         
-        const startTime = Date.now();
-        const endTime = startTime + (nextPerson.duration * 60 * 1000);
+        if (pendingConfirmations[huntId]) continue;
         
-        await deleteTempChannel(claim.tempChannel);
-        
-        const tempChannel = await createTempChannel(channel.guild, nextPerson.user, nextPerson.username, huntId, hunt.name);
-        
-        activeClaims[huntId] = {
-          user: nextPerson.user,
-          username: nextPerson.username,
-          channel: nextPerson.channel,
-          timestamp: startTime,
-          endTime: endTime,
-          duration: nextPerson.duration,
-          tempChannel: tempChannel ? tempChannel.id : null
-        };
-        
-        recalculateQueue(huntId);
-        
-        const endTimeFormatted = formatBrasiliaTime(endTime);
-        
-        if (channel) {
-          const embed = new EmbedBuilder()
-            .setColor('#00FF00')
-            .setTitle('🔔 Próximo da Fila Ativado!')
-            .setDescription(`O claim de <@${claim.user}> expirou!\n**${hunt.name}** agora é de <@${nextPerson.user}>`)
-            .addFields(
-              { name: '📍 Hunt', value: hunt.name, inline: true },
-              { name: '⏱️ Duração', value: `${nextPerson.duration} minutos`, inline: true },
-              { name: '🕐 Expira às', value: endTimeFormatted, inline: true }
-            )
-            .setFooter({ text: 'Horário de Brasília' })
-            .setTimestamp();
-          
-          if (nextQueue[huntId] && nextQueue[huntId].length > 0) {
-            let queueText = '';
-            nextQueue[huntId].forEach((next, index) => {
-              const nextStart = formatBrasiliaTime(next.startTime);
-              const nextEnd = formatBrasiliaTime(next.endTime);
-              queueText += `**${index + 1}.** <@${next.user}> | 🕐 ${nextStart}-${nextEnd}\n`;
-            });
-            
-            embed.addFields({
-              name: '\n🔔 PRÓXIMOS NA FILA',
-              value: queueText,
-              inline: false
-            });
-          }
-          
-          await channel.send({ embeds: [embed] });
-        }
+        const tempChannel = client.channels.cache.get(claim.tempChannel);
         
         if (tempChannel) {
-          await sendTempChannelMessage(tempChannel, huntId, nextPerson.user, nextPerson.duration, endTime);
+          pendingConfirmations[huntId] = {
+            nextPerson: nextPerson,
+            startTime: Date.now(),
+            notificationCount: 0
+          };
+          
+          await sendConfirmationMessage(tempChannel, huntId, hunt, claim, nextPerson);
+          
+          notificationIntervals[huntId] = setInterval(async () => {
+            const pending = pendingConfirmations[huntId];
+            if (!pending) {
+              clearInterval(notificationIntervals[huntId]);
+              delete notificationIntervals[huntId];
+              return;
+            }
+            
+            const elapsed = Date.now() - pending.startTime;
+            
+            if (elapsed >= 180000) {
+              clearInterval(notificationIntervals[huntId]);
+              delete notificationIntervals[huntId];
+              
+              nextQueue[huntId].shift();
+              delete pendingConfirmations[huntId];
+              
+              await tempChannel.send(`⏰ <@${nextPerson.user}> não confirmou a tempo! Passando para o próximo...`);
+              
+              await checkExpiredClaims();
+              return;
+            }
+            
+            pending.notificationCount++;
+            const tempCh = client.channels.cache.get(claim.tempChannel);
+            if (tempCh) {
+              await tempCh.send(`🔔 <@${nextPerson.user}> É sua vez! Confirme clicando em ✅ **(${pending.notificationCount}/12)**`);
+            }
+          }, 15000);
         }
       } else {
         if (channel) {
@@ -446,6 +438,27 @@ async function checkExpiredClaims() {
   }
   
   await updateStatusChannel();
+}
+
+async function sendConfirmationMessage(channel, huntId, hunt, oldClaim, nextPerson) {
+  const embed = new EmbedBuilder()
+    .setColor('#FFD700')
+    .setTitle('🔔 É SUA VEZ!')
+    .setDescription(`<@${nextPerson.user}> O claim de <@${oldClaim.user}> expirou!\n\n**${hunt.name}** agora é sua!\n\n⏰ **Você tem 3 minutos para confirmar!**\n\nClique em ✅ para assumir a hunt.`)
+    .addFields(
+      { name: '⏱️ Sua duração', value: `${nextPerson.duration} minutos`, inline: true },
+      { name: '⏰ Tempo para confirmar', value: '3 minutos', inline: true }
+    )
+    .setFooter({ text: 'Se não confirmar em 3 minutos, passará para o próximo da fila' })
+    .setTimestamp();
+
+  const confirmMessage = await channel.send({ content: `<@${nextPerson.user}>`, embeds: [embed] });
+  await confirmMessage.react('✅');
+  
+  if (!pendingConfirmations[huntId]) {
+    pendingConfirmations[huntId] = {};
+  }
+  pendingConfirmations[huntId].messageId = confirmMessage.id;
 }
 
 async function sendTempChannelMessage(channel, huntId, userId, duration, endTime) {
@@ -538,7 +551,7 @@ function showCommands(message) {
     .addFields(
       { 
         name: '👥 Comandos Gerais', 
-        value: '`!hunts` - Lista todas as hunts por categoria\n`!lista` - Lista simplificada (disponíveis/claimed)\n`!claim <hunt>` - Claima uma hunt (escolha a duração)\n`!tempo <hunt>` - Verifica tempo restante\n`!fila <hunt>` - Mostra a fila de uma hunt\n`!status` - Status de todos os claims ativos\n`!comandos` - Mostra esta lista',
+        value: '`!hunts` - Lista todas as hunts por categoria\n`!lista` - Lista simplificada (disponíveis/claimed)\n`!claim <hunt>` - Claima uma hunt (escolha a duração)\n`!next <hunt>` - Entra na fila de uma hunt\n`!tempo <hunt>` - Verifica tempo restante\n`!fila <hunt>` - Mostra a fila de uma hunt\n`!status` - Status de todos os claims ativos\n`!comandos` - Mostra esta lista',
         inline: false 
       },
       { 
@@ -548,7 +561,12 @@ function showCommands(message) {
       },
       {
         name: '🎯 Sistema de Claims',
-        value: 'Ao dar !claim, escolha a duração:\n**1️⃣** 1h 15min (75 minutos)\n**2️⃣** 2h 15min (135 minutos)\n**3️⃣** 3h 15min (195 minutos)\n**➕** Next (entrar na fila)\n**✅** Terminar hunt',
+        value: 'Ao dar !claim, escolha a duração:\n**1️⃣** 1h 15min (75 minutos)\n**2️⃣** 2h 15min (135 minutos)\n**3️⃣** 3h 15min (195 minutos)\n\n**No canal temporário:**\n**✅** Terminar hunt ou confirmar quando for sua vez',
+        inline: false
+      },
+      {
+        name: '🔔 Sistema de Fila',
+        value: 'Use `!next <hunt>` para entrar na fila\nVocê será adicionado ao canal da hunt\nQuando for sua vez, terá 3 minutos para confirmar\nNotificações a cada 15 segundos',
         inline: false
       }
     )
@@ -556,6 +574,71 @@ function showCommands(message) {
     .setTimestamp();
 
   message.reply({ embeds: [embed] });
+}
+
+async function addToQueueCommand(message, huntId) {
+  const hunt = HUNTS[huntId];
+  const claim = activeClaims[huntId];
+  
+  if (!hunt) {
+    return message.reply(`❌ Hunt não encontrada! Use \`!hunts\` ou \`!lista\` para ver as hunts disponíveis.`);
+  }
+  
+  if (!claim) {
+    return message.reply(`ℹ️ **${hunt.name}** não está claimed. Use \`!claim ${huntId}\` para claimar!`);
+  }
+
+  if (!nextQueue[huntId]) {
+    nextQueue[huntId] = [];
+  }
+
+  if (nextQueue[huntId].length >= 5) {
+    return message.reply(`❌ A fila de **${hunt.name}** está cheia (máximo 5 pessoas)!`);
+  }
+
+  const alreadyInQueue = nextQueue[huntId].some(next => next.user === message.author.id);
+  if (alreadyInQueue) {
+    return message.reply(`❌ Você já está na fila de **${hunt.name}**!`);
+  }
+
+  if (claim.user === message.author.id) {
+    return message.reply(`❌ Você não pode entrar na fila da sua própria hunt!`);
+  }
+
+  const embed = new EmbedBuilder()
+    .setColor('#FFD700')
+    .setTitle('⏱️ Escolha a Duração para a Fila')
+    .setDescription(`**${hunt.name}**\n\nClique em uma das reações abaixo para definir quanto tempo você vai ficar quando for sua vez:`)
+    .addFields(
+      { name: '1️⃣ 1h 15min', value: '75 minutos', inline: true },
+      { name: '2️⃣ 2h 15min', value: '135 minutos', inline: true },
+      { name: '3️⃣ 3h 15min', value: '195 minutos', inline: true }
+    )
+    .setFooter({ text: 'Você tem 60 segundos para escolher' })
+    .setTimestamp();
+
+  const selectionMessage = await message.reply({ embeds: [embed] });
+  
+  await selectionMessage.react('1️⃣');
+  await selectionMessage.react('2️⃣');
+  await selectionMessage.react('3️⃣');
+
+  pendingDurationSelection[selectionMessage.id] = {
+    huntId: huntId,
+    userId: message.author.id,
+    username: message.author.username,
+    channel: message.channel.id,
+    guildId: message.guild.id,
+    timestamp: Date.now(),
+    isQueue: true
+  };
+
+  setTimeout(() => {
+    if (pendingDurationSelection[selectionMessage.id]) {
+      delete pendingDurationSelection[selectionMessage.id];
+      selectionMessage.delete().catch(() => {});
+    }
+  }, 60000);
 }
 
 async function claimHunt(message, huntId) {
@@ -837,8 +920,15 @@ async function processQueueDurationSelection(reaction, user, messageId) {
 
   const hunt = HUNTS[selection.huntId];
   const duration = durationInfo.duration;
+  const claim = activeClaims[selection.huntId];
 
-  let startTime = activeClaims[selection.huntId].endTime;
+  if (!claim) {
+    delete pendingDurationSelection[messageId];
+    reaction.message.delete().catch(() => {});
+    return;
+  }
+
+  let startTime = claim.endTime;
   
   if (nextQueue[selection.huntId] && nextQueue[selection.huntId].length > 0) {
     const lastInQueue = nextQueue[selection.huntId][nextQueue[selection.huntId].length - 1];
@@ -856,6 +946,22 @@ async function processQueueDurationSelection(reaction, user, messageId) {
     endTime: endTime
   });
 
+  const tempChannel = client.channels.cache.get(claim.tempChannel);
+  if (tempChannel) {
+    try {
+      await tempChannel.permissionOverwrites.edit(user.id, {
+        ViewChannel: true,
+        SendMessages: true,
+        ReadMessageHistory: true,
+        AddReactions: true
+      });
+      
+      await tempChannel.send(`🔔 <@${user.id}> entrou na fila e agora pode acompanhar a hunt!`);
+    } catch (error) {
+      console.error('Erro ao adicionar pessoa ao canal:', error);
+    }
+  }
+
   const position = nextQueue[selection.huntId].length;
   const startTimeFormatted = formatBrasiliaDateTime(startTime);
   const endTimeFormatted = formatBrasiliaDateTime(endTime);
@@ -872,7 +978,7 @@ async function processQueueDurationSelection(reaction, user, messageId) {
         { name: '🕐 Início previsto', value: startTimeFormatted, inline: false },
         { name: '🕐 Fim previsto', value: endTimeFormatted, inline: false }
       )
-      .setFooter({ text: 'Horário de Brasília (UTC-3)' })
+      .setFooter({ text: 'Horário de Brasília (UTC-3) • Você foi adicionado ao canal da hunt!' })
       .setTimestamp();
 
     await originalChannel.send({ embeds: [embed] });
@@ -896,10 +1002,123 @@ function recalculateQueue(huntId) {
   });
 }
 
+async function confirmAndAssumeHunt(reaction, user, huntId) {
+  const hunt = HUNTS[huntId];
+  const claim = activeClaims[huntId];
+  const pending = pendingConfirmations[huntId];
+  
+  if (!pending) return;
+  
+  if (notificationIntervals[huntId]) {
+    clearInterval(notificationIntervals[huntId]);
+    delete notificationIntervals[huntId];
+  }
+  
+  const nextPerson = nextQueue[huntId].shift();
+  delete pendingConfirmations[huntId];
+  
+  const startTime = Date.now();
+  const endTime = startTime + (nextPerson.duration * 60 * 1000);
+  
+  const tempChannel = client.channels.cache.get(claim.tempChannel);
+  
+  if (tempChannel) {
+    try {
+      await tempChannel.permissionOverwrites.delete(claim.user);
+    } catch (error) {
+      console.error('Erro ao remover permissões antigas:', error);
+    }
+    
+    if (nextQueue[huntId]) {
+      for (const person of nextQueue[huntId]) {
+        if (person.user !== nextPerson.user) {
+          try {
+            await tempChannel.permissionOverwrites.delete(person.user);
+          } catch (error) {
+            console.error('Erro ao remover permissões:', error);
+          }
+        }
+      }
+    }
+    
+    try {
+      const messages = await tempChannel.messages.fetch({ limit: 100 });
+      await tempChannel.bulkDelete(messages);
+    } catch (error) {
+      console.error('Erro ao limpar mensagens:', error);
+    }
+  }
+  
+  activeClaims[huntId] = {
+    user: nextPerson.user,
+    username: nextPerson.username,
+    channel: nextPerson.channel,
+    timestamp: startTime,
+    endTime: endTime,
+    duration: nextPerson.duration,
+    tempChannel: tempChannel ? tempChannel.id : null
+  };
+  
+  recalculateQueue(huntId);
+  
+  const endTimeFormatted = formatBrasiliaTime(endTime);
+  
+  const originalChannel = client.channels.cache.get(claim.channel);
+  if (originalChannel) {
+    const embed = new EmbedBuilder()
+      .setColor('#00FF00')
+      .setTitle('✅ Hunt Confirmada!')
+      .setDescription(`<@${nextPerson.user}> confirmou e assumiu **${hunt.name}**!`)
+      .addFields(
+        { name: '📍 Hunt', value: hunt.name, inline: true },
+        { name: '⏱️ Duração', value: `${nextPerson.duration} minutos`, inline: true },
+        { name: '🕐 Expira às', value: endTimeFormatted, inline: true }
+      )
+      .setFooter({ text: 'Horário de Brasília (UTC-3)' })
+      .setTimestamp();
+    
+    await originalChannel.send({ embeds: [embed] });
+  }
+  
+  if (tempChannel) {
+    await sendTempChannelMessage(tempChannel, huntId, nextPerson.user, nextPerson.duration, endTime);
+    
+    if (nextQueue[huntId]) {
+      for (const person of nextQueue[huntId]) {
+        try {
+          await tempChannel.permissionOverwrites.edit(person.user, {
+            ViewChannel: true,
+            SendMessages: true,
+            ReadMessageHistory: true,
+            AddReactions: true
+          });
+        } catch (error) {
+          console.error('Erro ao adicionar pessoa ao canal:', error);
+        }
+      }
+    }
+  }
+  
+  await updateStatusChannel();
+}
+
 async function finishHunt(reaction, user, huntId) {
   const claim = activeClaims[huntId];
   
   if (!claim) return;
+
+  if (pendingConfirmations[huntId]) {
+    const pending = pendingConfirmations[huntId];
+    
+    if (user.id === pending.nextPerson.user) {
+      await confirmAndAssumeHunt(reaction, user, huntId);
+      return;
+    } else {
+      const tempMessage = await reaction.message.channel.send(`❌ <@${user.id}> Apenas <@${pending.nextPerson.user}> pode confirmar agora!`);
+      setTimeout(() => tempMessage.delete().catch(() => {}), 5000);
+      return;
+    }
+  }
 
   if (claim.user !== user.id) {
     const tempMessage = await reaction.message.channel.send(`❌ <@${user.id}> Apenas quem deu o claim pode finalizar a hunt!`);
@@ -909,52 +1128,50 @@ async function finishHunt(reaction, user, huntId) {
 
   const hunt = HUNTS[huntId];
   const originalChannel = client.channels.cache.get(claim.channel);
-
   const hasNext = nextQueue[huntId] && nextQueue[huntId].length > 0;
 
   if (hasNext) {
-    const nextPerson = nextQueue[huntId].shift();
-    
-    const startTime = Date.now();
-    const endTime = startTime + (nextPerson.duration * 60 * 1000);
-    
-    await deleteTempChannel(claim.tempChannel);
-    
-    const guild = reaction.message.guild;
-    const tempChannel = await createTempChannel(guild, nextPerson.user, nextPerson.username, huntId, hunt.name);
-    
-    activeClaims[huntId] = {
-      user: nextPerson.user,
-      username: nextPerson.username,
-      channel: nextPerson.channel,
-      timestamp: startTime,
-      endTime: endTime,
-      duration: nextPerson.duration,
-      tempChannel: tempChannel ? tempChannel.id : null
-    };
-    
-    recalculateQueue(huntId);
-    
-    const endTimeFormatted = formatBrasiliaTime(endTime);
-    
-    if (originalChannel) {
-      const embed = new EmbedBuilder()
-        .setColor('#00FF00')
-        .setTitle('✅ Hunt Finalizada - Próximo Ativado!')
-        .setDescription(`<@${user.id}> finalizou **${hunt.name}**!\nAgora é a vez de <@${nextPerson.user}>`)
-        .addFields(
-          { name: '📍 Hunt', value: hunt.name, inline: true },
-          { name: '⏱️ Duração', value: `${nextPerson.duration} minutos`, inline: true },
-          { name: '🕐 Expira às', value: endTimeFormatted, inline: true }
-        )
-        .setFooter({ text: 'Horário de Brasília (UTC-3)' })
-        .setTimestamp();
-      
-      await originalChannel.send({ embeds: [embed] });
-    }
+    const nextPerson = nextQueue[huntId][0];
+    const tempChannel = client.channels.cache.get(claim.tempChannel);
     
     if (tempChannel) {
-      await sendTempChannelMessage(tempChannel, huntId, nextPerson.user, nextPerson.duration, endTime);
+      pendingConfirmations[huntId] = {
+        nextPerson: nextPerson,
+        startTime: Date.now(),
+        notificationCount: 0
+      };
+      
+      await sendConfirmationMessage(tempChannel, huntId, hunt, claim, nextPerson);
+      
+      notificationIntervals[huntId] = setInterval(async () => {
+        const pending = pendingConfirmations[huntId];
+        if (!pending) {
+          clearInterval(notificationIntervals[huntId]);
+          delete notificationIntervals[huntId];
+          return;
+        }
+        
+        const elapsed = Date.now() - pending.startTime;
+        
+        if (elapsed >= 180000) {
+          clearInterval(notificationIntervals[huntId]);
+          delete notificationIntervals[huntId];
+          
+          nextQueue[huntId].shift();
+          delete pendingConfirmations[huntId];
+          
+          await tempChannel.send(`⏰ <@${nextPerson.user}> não confirmou a tempo! Passando para o próximo...`);
+          
+          await checkExpiredClaims();
+          return;
+        }
+        
+        pending.notificationCount++;
+        const tempCh = client.channels.cache.get(claim.tempChannel);
+        if (tempCh) {
+          await tempCh.send(`🔔 <@${nextPerson.user}> É sua vez! Confirme clicando em ✅ **(${pending.notificationCount}/12)**`);
+        }
+      }, 15000);
     }
   } else {
     if (originalChannel) {
@@ -1171,6 +1388,14 @@ client.on('messageCreate', async (message) => {
         message.reply('❌ Use: `!claim <hunt>`\nExemplo: `!claim energy-vip`');
       } else {
         await claimHunt(message, huntId);
+      }
+      break;
+
+    case 'next':
+      if (!huntId) {
+        message.reply('❌ Use: `!next <hunt>`\nExemplo: `!next energy-vip`');
+      } else {
+        await addToQueueCommand(message, huntId);
       }
       break;
 
