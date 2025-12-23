@@ -40,10 +40,8 @@ const HUNTS = {
   'inferniak-1': { name: 'INFERNIAK 1', category: 'INFERNIAK' },
   'inferniak-m1': { name: 'INFERNIAK M1', category: 'INFERNIAK' },
   
-  // WARZONE (11 vagas)
+  // WARZONE (9 vagas - REMOVIDAS: 2 e 3)
   'warzone-1': { name: 'WARZONE 1', category: 'WARZONE' },
-  'warzone-2': { name: 'WARZONE 2', category: 'WARZONE' },
-  'warzone-3': { name: 'WARZONE 3', category: 'WARZONE' },
   'warzone-4': { name: 'WARZONE 4', category: 'WARZONE' },
   'warzone-5': { name: 'WARZONE 5', category: 'WARZONE' },
   'warzone-6': { name: 'WARZONE 6', category: 'WARZONE' },
@@ -53,21 +51,13 @@ const HUNTS = {
   'warzone-10': { name: 'WARZONE 10', category: 'WARZONE' },
   'warzone-11': { name: 'WARZONE 11', category: 'WARZONE' },
   
-  // OUTRAS VIP
+  // OUTRAS VIP (REMOVIDAS: Falcon VIP e Carnivor VIP)
   'elfo-vip': { name: 'Elfo VIP', category: 'VIP' },
-  'falcon-vip': { name: 'Falcon VIP', category: 'VIP' },
-  'carnivor-vip': { name: 'Carnivor VIP', category: 'VIP' },
   'turbulent-vip': { name: 'Turbulent VIP', category: 'VIP' },
   'brachiodemon-vip': { name: 'Brachiodemon VIP', category: 'VIP' },
   'cloak-vip': { name: 'Cloak VIP', category: 'VIP' },
   'rotten-vip': { name: 'Rotten VIP', category: 'VIP' },
   'dark-thais-vip': { name: 'Dark Thais VIP', category: 'VIP' },
-  
-  // GOANNA VIP (4 vagas)
-  'goanna-vip-1': { name: 'Goanna VIP Vaga 1', category: 'Goanna' },
-  'goanna-vip-2': { name: 'Goanna VIP Vaga 2', category: 'Goanna' },
-  'goanna-vip-3': { name: 'Goanna VIP Vaga 3', category: 'Goanna' },
-  'goanna-vip-4': { name: 'Goanna VIP Vaga 4', category: 'Goanna' },
   
   // HARD
   'noxious-hard': { name: 'Noxious HARD', category: 'HARD' },
@@ -1485,3 +1475,4 @@ client.on('messageReactionAdd', async (reaction, user) => {
 });
 
 client.login(TOKEN);
+
