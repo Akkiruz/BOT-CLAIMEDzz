@@ -12,80 +12,89 @@ if (!TOKEN) {
 // ID do canal de status (será criado automaticamente)
 let statusChannelId = null;
 
-// Configuração das hunts com 2 horas (120 minutos) cada
+// ID da categoria onde os canais temporários serão criados
+let tempChannelsCategoryId = null;
+
+// Configuração das hunts - duração será escolhida pelo usuário via reações
 const HUNTS = {
   // ENERGY
-  'energy-vip': { name: 'Energy VIP', category: 'Energy', duration: 120 },
-  'energy-free': { name: 'Energy FREE', category: 'Energy', duration: 120 },
+  'energy-vip': { name: 'Energy VIP', category: 'Energy' },
+  'energy-free': { name: 'Energy FREE', category: 'Energy' },
   
   // TERRA
-  'terra-vip': { name: 'Terra VIP', category: 'Terra', duration: 120 },
-  'terra-free': { name: 'Terra FREE', category: 'Terra', duration: 120 },
+  'terra-vip': { name: 'Terra VIP', category: 'Terra' },
+  'terra-free': { name: 'Terra FREE', category: 'Terra' },
   
   // ICE
-  'ice-vip': { name: 'Ice VIP', category: 'Ice', duration: 120 },
-  'ice-free': { name: 'Ice FREE', category: 'Ice', duration: 120 },
+  'ice-vip': { name: 'Ice VIP', category: 'Ice' },
+  'ice-free': { name: 'Ice FREE', category: 'Ice' },
   
   // FIRE
-  'fire-vip': { name: 'Fire VIP', category: 'Fire', duration: 120 },
-  'fire-free': { name: 'Fire FREE', category: 'Fire', duration: 120 },
+  'fire-vip': { name: 'Fire VIP', category: 'Fire' },
+  'fire-free': { name: 'Fire FREE', category: 'Fire' },
   
   // INFERNIAK
-  'inferniak-1': { name: 'INFERNIAK 1', category: 'INFERNIAK', duration: 120 },
-  'inferniak-m1': { name: 'INFERNIAK M1', category: 'INFERNIAK', duration: 120 },
+  'inferniak-1': { name: 'INFERNIAK 1', category: 'INFERNIAK' },
+  'inferniak-m1': { name: 'INFERNIAK M1', category: 'INFERNIAK' },
   
   // WARZONE (11 vagas)
-  'warzone-1': { name: 'WARZONE 1', category: 'WARZONE', duration: 120 },
-  'warzone-2': { name: 'WARZONE 2', category: 'WARZONE', duration: 120 },
-  'warzone-3': { name: 'WARZONE 3', category: 'WARZONE', duration: 120 },
-  'warzone-4': { name: 'WARZONE 4', category: 'WARZONE', duration: 120 },
-  'warzone-5': { name: 'WARZONE 5', category: 'WARZONE', duration: 120 },
-  'warzone-6': { name: 'WARZONE 6', category: 'WARZONE', duration: 120 },
-  'warzone-7': { name: 'WARZONE 7', category: 'WARZONE', duration: 120 },
-  'warzone-8': { name: 'WARZONE 8', category: 'WARZONE', duration: 120 },
-  'warzone-9': { name: 'WARZONE 9', category: 'WARZONE', duration: 120 },
-  'warzone-10': { name: 'WARZONE 10', category: 'WARZONE', duration: 120 },
-  'warzone-11': { name: 'WARZONE 11', category: 'WARZONE', duration: 120 },
+  'warzone-1': { name: 'WARZONE 1', category: 'WARZONE' },
+  'warzone-2': { name: 'WARZONE 2', category: 'WARZONE' },
+  'warzone-3': { name: 'WARZONE 3', category: 'WARZONE' },
+  'warzone-4': { name: 'WARZONE 4', category: 'WARZONE' },
+  'warzone-5': { name: 'WARZONE 5', category: 'WARZONE' },
+  'warzone-6': { name: 'WARZONE 6', category: 'WARZONE' },
+  'warzone-7': { name: 'WARZONE 7', category: 'WARZONE' },
+  'warzone-8': { name: 'WARZONE 8', category: 'WARZONE' },
+  'warzone-9': { name: 'WARZONE 9', category: 'WARZONE' },
+  'warzone-10': { name: 'WARZONE 10', category: 'WARZONE' },
+  'warzone-11': { name: 'WARZONE 11', category: 'WARZONE' },
   
   // OUTRAS VIP
-  'elfo-vip': { name: 'Elfo VIP', category: 'VIP', duration: 120 },
-  'falcon-vip': { name: 'Falcon VIP', category: 'VIP', duration: 120 },
-  'carnivor-vip': { name: 'Carnivor VIP', category: 'VIP', duration: 120 },
-  'turbulent-vip': { name: 'Turbulent VIP', category: 'VIP', duration: 120 },
-  'brachiodemon-vip': { name: 'Brachiodemon VIP', category: 'VIP', duration: 120 },
-  'cloak-vip': { name: 'Cloak VIP', category: 'VIP', duration: 120 },
-  'rotten-vip': { name: 'Rotten VIP', category: 'VIP', duration: 120 },
-  'dark-thais-vip': { name: 'Dark Thais VIP', category: 'VIP', duration: 120 },
+  'elfo-vip': { name: 'Elfo VIP', category: 'VIP' },
+  'falcon-vip': { name: 'Falcon VIP', category: 'VIP' },
+  'carnivor-vip': { name: 'Carnivor VIP', category: 'VIP' },
+  'turbulent-vip': { name: 'Turbulent VIP', category: 'VIP' },
+  'brachiodemon-vip': { name: 'Brachiodemon VIP', category: 'VIP' },
+  'cloak-vip': { name: 'Cloak VIP', category: 'VIP' },
+  'rotten-vip': { name: 'Rotten VIP', category: 'VIP' },
+  'dark-thais-vip': { name: 'Dark Thais VIP', category: 'VIP' },
   
   // GOANNA VIP (4 vagas)
-  'goanna-vip-1': { name: 'Goanna VIP Vaga 1', category: 'Goanna', duration: 120 },
-  'goanna-vip-2': { name: 'Goanna VIP Vaga 2', category: 'Goanna', duration: 120 },
-  'goanna-vip-3': { name: 'Goanna VIP Vaga 3', category: 'Goanna', duration: 120 },
-  'goanna-vip-4': { name: 'Goanna VIP Vaga 4', category: 'Goanna', duration: 120 },
+  'goanna-vip-1': { name: 'Goanna VIP Vaga 1', category: 'Goanna' },
+  'goanna-vip-2': { name: 'Goanna VIP Vaga 2', category: 'Goanna' },
+  'goanna-vip-3': { name: 'Goanna VIP Vaga 3', category: 'Goanna' },
+  'goanna-vip-4': { name: 'Goanna VIP Vaga 4', category: 'Goanna' },
   
   // HARD
-  'noxious-hard': { name: 'Noxious HARD', category: 'HARD', duration: 120 },
-  'aranha-hard': { name: 'Aranha HARD', category: 'HARD', duration: 120 },
-  'bloated-hard': { name: 'Bloated HARD', category: 'HARD', duration: 120 },
-  'darklight-hard': { name: 'Darklight HARD', category: 'HARD', duration: 120 },
-  'rotten-man-hard': { name: 'Rotten Man HARD', category: 'HARD', duration: 120 },
-  'wandering-hard': { name: 'Wandering HARD', category: 'HARD', duration: 120 },
-  'dark-thais-hard': { name: 'Dark Thais HARD', category: 'HARD', duration: 120 },
-  'dark-thais-2-hard': { name: 'Dark Thais 2 HARD', category: 'HARD', duration: 120 },
-  'piranha-hard': { name: 'Piranha HARD', category: 'HARD', duration: 120 },
-  'cloak-hard': { name: 'Cloak HARD', category: 'HARD', duration: 120 },
-  'rotten-hard': { name: 'Rotten HARD', category: 'HARD', duration: 120 },
-  'brachiodemon-hard': { name: 'Brachiodemon HARD', category: 'HARD', duration: 120 }
+  'noxious-hard': { name: 'Noxious HARD', category: 'HARD' },
+  'aranha-hard': { name: 'Aranha HARD', category: 'HARD' },
+  'bloated-hard': { name: 'Bloated HARD', category: 'HARD' },
+  'darklight-hard': { name: 'Darklight HARD', category: 'HARD' },
+  'rotten-man-hard': { name: 'Rotten Man HARD', category: 'HARD' },
+  'wandering-hard': { name: 'Wandering HARD', category: 'HARD' },
+  'dark-thais-hard': { name: 'Dark Thais HARD', category: 'HARD' },
+  'dark-thais-2-hard': { name: 'Dark Thais 2 HARD', category: 'HARD' },
+  'piranha-hard': { name: 'Piranha HARD', category: 'HARD' },
+  'cloak-hard': { name: 'Cloak HARD', category: 'HARD' },
+  'rotten-hard': { name: 'Rotten HARD', category: 'HARD' },
+  'brachiodemon-hard': { name: 'Brachiodemon HARD', category: 'HARD' }
 };
 
-// Armazena os claims ativos {huntId: {user, username, channel, timestamp, endTime}}
+// Armazena os claims ativos
 const activeClaims = {};
-
-// Armazena os "next" ativos {huntId: [{user, username, startTime, endTime}]}
-// Cada hunt pode ter uma fila de até 5 pessoas
 const nextQueue = {};
+const pendingDurationSelection = {};
 
-// Função para formatar horário em Brasília (UTC-3)
+// Emojis para as reações
+const DURATION_EMOJIS = {
+  '1️⃣': { duration: 75, label: '1h 15min' },
+  '2️⃣': { duration: 135, label: '2h 15min' },
+  '3️⃣': { duration: 195, label: '3h 15min' },
+  '➕': { action: 'next', label: 'Next (entrar na fila)' },
+  '✅': { action: 'finish', label: 'Terminar hunt' }
+};
+
 function formatBrasiliaTime(timestamp) {
   return new Date(timestamp).toLocaleTimeString('pt-BR', { 
     hour: '2-digit', 
@@ -94,7 +103,6 @@ function formatBrasiliaTime(timestamp) {
   });
 }
 
-// Função para formatar data e hora completa em Brasília
 function formatBrasiliaDateTime(timestamp) {
   return new Date(timestamp).toLocaleString('pt-BR', { 
     day: '2-digit',
@@ -109,7 +117,8 @@ const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
     GatewayIntentBits.GuildMessages,
-    GatewayIntentBits.MessageContent
+    GatewayIntentBits.MessageContent,
+    GatewayIntentBits.GuildMessageReactions
   ]
 });
 
@@ -117,21 +126,151 @@ client.once('ready', async () => {
   console.log(`✅ Bot online como ${client.user.tag}`);
   console.log(`📋 ${Object.keys(HUNTS).length} hunts configuradas`);
   
-  // Verifica claims expirados a cada 30 segundos
   setInterval(checkExpiredClaims, 30000);
-  
-  // Atualiza o canal de status a cada minuto
   setInterval(() => updateStatusChannel(), 60000);
+  setInterval(() => updateTempChannels(), 10000);
 });
 
-// Função para criar/encontrar canal de status
+async function getOrCreateTempCategory(guild) {
+  if (tempChannelsCategoryId) {
+    const category = guild.channels.cache.get(tempChannelsCategoryId);
+    if (category) return category;
+  }
+
+  let category = guild.channels.cache.find(c => c.name === '🎯 HUNTS ATIVAS' && c.type === ChannelType.GuildCategory);
+  
+  if (!category) {
+    try {
+      category = await guild.channels.create({
+        name: '🎯 HUNTS ATIVAS',
+        type: ChannelType.GuildCategory,
+        permissionOverwrites: [
+          {
+            id: guild.id,
+            deny: [PermissionFlagsBits.ViewChannel]
+          }
+        ]
+      });
+      console.log(`✅ Categoria "🎯 HUNTS ATIVAS" criada!`);
+    } catch (error) {
+      console.error('❌ Erro ao criar categoria:', error);
+      return null;
+    }
+  }
+  
+  tempChannelsCategoryId = category.id;
+  return category;
+}
+
+async function createTempChannel(guild, userId, username, huntId, huntName) {
+  const category = await getOrCreateTempCategory(guild);
+  if (!category) return null;
+
+  try {
+    const channelName = `🎯-${huntName.toLowerCase().replace(/\s+/g, '-')}`;
+    
+    const channel = await guild.channels.create({
+      name: channelName,
+      type: ChannelType.GuildText,
+      parent: category.id,
+      topic: `Hunt claimed por ${username} - Use as reações para gerenciar`,
+      permissionOverwrites: [
+        {
+          id: guild.id,
+          deny: [PermissionFlagsBits.ViewChannel]
+        },
+        {
+          id: userId,
+          allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory]
+        },
+        {
+          id: client.user.id,
+          allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ManageChannels]
+        }
+      ]
+    });
+
+    console.log(`✅ Canal temporário criado: ${channel.name}`);
+    return channel;
+  } catch (error) {
+    console.error('❌ Erro ao criar canal temporário:', error);
+    return null;
+  }
+}
+
+async function updateTempChannels() {
+  for (const [huntId, claim] of Object.entries(activeClaims)) {
+    if (!claim.tempChannel) continue;
+    
+    const channel = client.channels.cache.get(claim.tempChannel);
+    if (!channel) continue;
+
+    try {
+      const messages = await channel.messages.fetch({ limit: 5 });
+      const botMessage = messages.find(m => m.author.id === client.user.id && m.embeds.length > 0);
+
+      if (botMessage) {
+        const timeRemaining = getTimeRemainingDetailed(claim.endTime);
+        const endTimeFormatted = formatBrasiliaTime(claim.endTime);
+        const hunt = HUNTS[huntId];
+        
+        const embed = new EmbedBuilder()
+          .setColor(Date.now() >= claim.endTime ? '#FF0000' : '#00FF00')
+          .setTitle(`🎯 ${hunt.name}`)
+          .setDescription(`**Status:** ${Date.now() >= claim.endTime ? '🔴 EXPIRADO' : '🟢 ATIVO'}`)
+          .addFields(
+            { name: '👤 Claimed por', value: `<@${claim.user}>`, inline: true },
+            { name: '⏱️ Duração', value: `${claim.duration} minutos`, inline: true },
+            { name: '⏰ Tempo restante', value: timeRemaining, inline: true },
+            { name: '🕐 Expira às', value: endTimeFormatted, inline: true },
+            { name: '📅 Horário', value: 'Brasília (UTC-3)', inline: true }
+          )
+          .setFooter({ text: 'Atualiza automaticamente a cada 10 segundos' })
+          .setTimestamp();
+
+        if (nextQueue[huntId] && nextQueue[huntId].length > 0) {
+          let queueText = '';
+          nextQueue[huntId].forEach((next, index) => {
+            const nextStart = formatBrasiliaTime(next.startTime);
+            const nextEnd = formatBrasiliaTime(next.endTime);
+            queueText += `**${index + 1}.** <@${next.user}> | 🕐 ${nextStart}-${nextEnd}\n`;
+          });
+          
+          embed.addFields({
+            name: `\n🔔 FILA (${nextQueue[huntId].length}/5)`,
+            value: queueText,
+            inline: false
+          });
+        }
+
+        await botMessage.edit({ embeds: [embed] });
+      }
+    } catch (error) {
+      console.error('Erro ao atualizar canal temporário:', error);
+    }
+  }
+}
+
+async function deleteTempChannel(channelId) {
+  if (!channelId) return;
+  
+  try {
+    const channel = client.channels.cache.get(channelId);
+    if (channel) {
+      await channel.delete();
+      console.log(`✅ Canal temporário deletado`);
+    }
+  } catch (error) {
+    console.error('❌ Erro ao deletar canal temporário:', error);
+  }
+}
+
 async function getOrCreateStatusChannel(guild) {
   if (statusChannelId) {
     const channel = guild.channels.cache.get(statusChannelId);
     if (channel) return channel;
   }
 
-  // Procura por canal existente
   let channel = guild.channels.cache.find(c => c.name === '📊-hunt-status');
   
   if (!channel) {
@@ -159,18 +298,15 @@ async function getOrCreateStatusChannel(guild) {
   return channel;
 }
 
-// Atualiza o canal de status
 async function updateStatusChannel() {
   if (!statusChannelId) return;
   
   const channel = client.channels.cache.get(statusChannelId);
   if (!channel) return;
 
-  // Limpa mensagens antigas
   const messages = await channel.messages.fetch({ limit: 10 });
   await channel.bulkDelete(messages).catch(() => {});
 
-  // Organiza claims por categoria
   const categories = {};
   
   for (const [id, claim] of Object.entries(activeClaims)) {
@@ -191,7 +327,6 @@ async function updateStatusChannel() {
     });
   }
 
-  // Cria embed para cada categoria
   for (const [category, claims] of Object.entries(categories)) {
     let description = '';
     
@@ -212,7 +347,6 @@ async function updateStatusChannel() {
     await channel.send({ embeds: [embed] });
   }
 
-  // Hunts disponíveis
   const availableHunts = [];
   for (const [id, hunt] of Object.entries(HUNTS)) {
     if (!activeClaims[id]) {
@@ -232,7 +366,6 @@ async function updateStatusChannel() {
   }
 }
 
-// Função para verificar claims expirados
 async function checkExpiredClaims() {
   const now = Date.now();
   
@@ -241,25 +374,28 @@ async function checkExpiredClaims() {
       const hunt = HUNTS[huntId];
       const channel = client.channels.cache.get(claim.channel);
       
-      // Verifica se há próximo na fila
       const hasNext = nextQueue[huntId] && nextQueue[huntId].length > 0;
       
       if (hasNext) {
-        const nextPerson = nextQueue[huntId].shift(); // Remove primeiro da fila
+        const nextPerson = nextQueue[huntId].shift();
         
-        // Claim automático para o próximo
         const startTime = Date.now();
-        const endTime = startTime + (hunt.duration * 60 * 1000);
+        const endTime = startTime + (nextPerson.duration * 60 * 1000);
+        
+        await deleteTempChannel(claim.tempChannel);
+        
+        const tempChannel = await createTempChannel(channel.guild, nextPerson.user, nextPerson.username, huntId, hunt.name);
         
         activeClaims[huntId] = {
           user: nextPerson.user,
           username: nextPerson.username,
           channel: nextPerson.channel,
           timestamp: startTime,
-          endTime: endTime
+          endTime: endTime,
+          duration: nextPerson.duration,
+          tempChannel: tempChannel ? tempChannel.id : null
         };
         
-        // Recalcula fila restante
         recalculateQueue(huntId);
         
         const endTimeFormatted = formatBrasiliaTime(endTime);
@@ -271,19 +407,18 @@ async function checkExpiredClaims() {
             .setDescription(`O claim de <@${claim.user}> expirou!\n**${hunt.name}** agora é de <@${nextPerson.user}>`)
             .addFields(
               { name: '📍 Hunt', value: hunt.name, inline: true },
-              { name: '⏱️ Duração', value: `${hunt.duration} minutos`, inline: true },
+              { name: '⏱️ Duração', value: `${nextPerson.duration} minutos`, inline: true },
               { name: '🕐 Expira às', value: endTimeFormatted, inline: true }
             )
             .setFooter({ text: 'Horário de Brasília' })
             .setTimestamp();
           
-          // Mostra próximo se ainda houver fila
           if (nextQueue[huntId] && nextQueue[huntId].length > 0) {
             let queueText = '';
             nextQueue[huntId].forEach((next, index) => {
               const nextStart = formatBrasiliaTime(next.startTime);
               const nextEnd = formatBrasiliaTime(next.endTime);
-              queueText += `**Fila ${index + 1}:** <@${next.user}> | 🕐 ${nextStart}-${nextEnd}\n`;
+              queueText += `**${index + 1}.** <@${next.user}> | 🕐 ${nextStart}-${nextEnd}\n`;
             });
             
             embed.addFields({
@@ -296,33 +431,61 @@ async function checkExpiredClaims() {
           await channel.send({ embeds: [embed] });
         }
         
-        // Notifica o próximo
-        try {
-          const nextChannel = client.channels.cache.get(nextPerson.channel);
-          if (nextChannel) {
-            await nextChannel.send(`🔔 <@${nextPerson.user}> Sua vez em **${hunt.name}**! A hunt já está claimed para você até **${endTimeFormatted}**!`);
-          }
-        } catch (error) {
-          console.error('Erro ao notificar próximo:', error);
+        if (tempChannel) {
+          await sendTempChannelMessage(tempChannel, huntId, nextPerson.user, nextPerson.duration, endTime);
         }
       } else {
         if (channel) {
           channel.send(`⏰ O claim de **${hunt.name}** de <@${claim.user}> expirou! A hunt está disponível novamente! 🎉`);
         }
+        
+        await deleteTempChannel(claim.tempChannel);
         delete activeClaims[huntId];
       }
     }
   }
   
-  // Atualiza canal de status
   await updateStatusChannel();
 }
 
-// Comando: !hunts - Lista todas as hunts
+async function sendTempChannelMessage(channel, huntId, userId, duration, endTime) {
+  const hunt = HUNTS[huntId];
+  const endTimeFormatted = formatBrasiliaTime(endTime);
+  const timeRemaining = getTimeRemainingDetailed(endTime);
+  
+  const embed = new EmbedBuilder()
+    .setColor('#00FF00')
+    .setTitle(`🎯 ${hunt.name}`)
+    .setDescription('**Status:** 🟢 ATIVO')
+    .addFields(
+      { name: '👤 Claimed por', value: `<@${userId}>`, inline: true },
+      { name: '⏱️ Duração', value: `${duration} minutos`, inline: true },
+      { name: '⏰ Tempo restante', value: timeRemaining, inline: true },
+      { name: '🕐 Expira às', value: endTimeFormatted, inline: true },
+      { name: '📅 Horário', value: 'Brasília (UTC-3)', inline: true }
+    )
+    .setFooter({ text: 'Use as reações abaixo para gerenciar sua hunt' })
+    .setTimestamp();
+
+  const controlEmbed = new EmbedBuilder()
+    .setColor('#FFD700')
+    .setTitle('🎮 CONTROLES DA HUNT')
+    .setDescription('Use as reações abaixo para gerenciar:')
+    .addFields(
+      { name: '➕ Next', value: 'Entrar na fila desta hunt', inline: false },
+      { name: '✅ Terminar', value: 'Finalizar sua hunt agora', inline: false }
+    )
+    .setFooter({ text: 'Clique nas reações para usar' });
+
+  const message = await channel.send({ content: `<@${userId}> Bem-vindo ao seu canal de hunt!`, embeds: [embed, controlEmbed] });
+  
+  await message.react('➕');
+  await message.react('✅');
+}
+
 function listHunts(message) {
   const categories = {};
   
-  // Organiza por categoria
   for (const [id, hunt] of Object.entries(HUNTS)) {
     if (!categories[hunt.category]) {
       categories[hunt.category] = [];
@@ -333,7 +496,6 @@ function listHunts(message) {
     categories[hunt.category].push({ id, hunt, status, claim });
   }
 
-  // Cria embeds por categoria
   for (const [category, hunts] of Object.entries(categories)) {
     let description = '';
     
@@ -345,13 +507,12 @@ function listHunts(message) {
         const endTime = formatBrasiliaTime(claim.endTime);
         description += `   👤 <@${claim.user}> | ⏰ ${time} | 🕐 ${endTime}\n`;
         
-        // Mostra fila de next se houver
         if (nextQueue[id] && nextQueue[id].length > 0) {
           description += `   🔔 **FILA (${nextQueue[id].length}):**\n`;
           nextQueue[id].forEach((next, index) => {
             const nextStart = formatBrasiliaTime(next.startTime);
             const nextEnd = formatBrasiliaTime(next.endTime);
-            description += `      **Fila ${index + 1}:** <@${next.user}> | 🕐 ${nextStart}-${nextEnd}\n`;
+            description += `      **${index + 1}.** <@${next.user}> | 🕐 ${nextStart}-${nextEnd}\n`;
           });
         }
       }
@@ -362,14 +523,41 @@ function listHunts(message) {
       .setColor(category === 'HARD' ? '#FF0000' : category === 'VIP' ? '#FFD700' : category === 'INFERNIAK' ? '#FF6600' : category === 'WARZONE' ? '#8B00FF' : '#00FF00')
       .setTitle(`📍 ${category}`)
       .setDescription(description)
-      .setFooter({ text: 'Use !claim <hunt> para claimar | !next <hunt> para entrar na fila' })
+      .setFooter({ text: 'Use !claim <hunt> para claimar' })
       .setTimestamp();
 
     message.channel.send({ embeds: [embed] });
   }
 }
 
-// Comando: !claim <hunt> - Fazer claim de uma hunt
+function showCommands(message) {
+  const embed = new EmbedBuilder()
+    .setColor('#0099FF')
+    .setTitle('📋 Lista de Comandos')
+    .setDescription('Todos os comandos disponíveis do bot')
+    .addFields(
+      { 
+        name: '👥 Comandos Gerais', 
+        value: '`!hunts` - Lista todas as hunts por categoria\n`!lista` - Lista simplificada (disponíveis/claimed)\n`!claim <hunt>` - Claima uma hunt (escolha a duração)\n`!tempo <hunt>` - Verifica tempo restante\n`!fila <hunt>` - Mostra a fila de uma hunt\n`!status` - Status de todos os claims ativos\n`!comandos` - Mostra esta lista',
+        inline: false 
+      },
+      { 
+        name: '🛡️ Comandos Admin', 
+        value: '`!terminoja <hunt>` - Remove claim de uma hunt\n`!limparclaims` - Remove todos os claims\n`!limpasala` - Limpa todas as mensagens do canal',
+        inline: false 
+      },
+      {
+        name: '🎯 Sistema de Claims',
+        value: 'Ao dar !claim, escolha a duração:\n**1️⃣** 1h 15min (75 minutos)\n**2️⃣** 2h 15min (135 minutos)\n**3️⃣** 3h 15min (195 minutos)\n**➕** Next (entrar na fila)\n**✅** Terminar hunt',
+        inline: false
+      }
+    )
+    .setFooter({ text: 'Bot de Hunt Claims • Desenvolvido para organização' })
+    .setTimestamp();
+
+  message.reply({ embeds: [embed] });
+}
+
 async function claimHunt(message, huntId) {
   const hunt = HUNTS[huntId];
   
@@ -384,709 +572,691 @@ async function claimHunt(message, huntId) {
     return message.reply(`❌ **${hunt.name}** já está claimed por <@${existingClaim.user}>!\n⏰ Tempo restante: **${timeRemaining}**`);
   }
 
-  // Calcula horário de término
-  const startTime = Date.now();
-  const endTime = startTime + (hunt.duration * 60 * 1000);
+  const embed = new EmbedBuilder()
+    .setColor('#FFD700')
+    .setTitle('⏱️ Escolha a Duração da Hunt')
+    .setDescription(`**${hunt.name}**\n\nClique em uma das reações abaixo para definir quanto tempo você vai ficar:`)
+    .addFields(
+      { name: '1️⃣', value: '**1h 15min** (75 minutos)', inline: true },
+      { name: '2️⃣', value: '**2h 15min** (135 minutos)', inline: true },
+      { name: '3️⃣', value: '**3h 15min** (195 minutos)', inline: true }
+    )
+    .setFooter({ text: 'Você tem 60 segundos para escolher' })
+    .setTimestamp();
 
-  // Fazer o claim
-  activeClaims[huntId] = {
-    user: message.author.id,
+  const selectionMessage = await message.reply({ embeds: [embed] });
+  
+  await selectionMessage.react('1️⃣');
+  await selectionMessage.react('2️⃣');
+  await selectionMessage.react('3️⃣');
+
+  pendingDurationSelection[selectionMessage.id] = {
+    huntId: huntId,
+    userId: message.author.id,
     username: message.author.username,
     channel: message.channel.id,
+    guildId: message.guild.id,
+    timestamp: Date.now()
+  };
+
+  setTimeout(() => {
+    if (pendingDurationSelection[selectionMessage.id]) {
+      delete pendingDurationSelection[selectionMessage.id];
+      selectionMessage.delete().catch(() => {});
+    }
+  }, 60000);
+}
+
+async function processDurationSelection(reaction, user, messageId) {
+  const selection = pendingDurationSelection[messageId];
+  if (!selection || selection.userId !== user.id) return;
+
+  const emoji = reaction.emoji.name;
+  const durationInfo = DURATION_EMOJIS[emoji];
+  
+  if (!durationInfo || !durationInfo.duration) return;
+
+  const hunt = HUNTS[selection.huntId];
+  const duration = durationInfo.duration;
+  
+  const startTime = Date.now();
+  const endTime = startTime + (duration * 60 * 1000);
+
+  const guild = client.guilds.cache.get(selection.guildId);
+  const tempChannel = await createTempChannel(guild, user.id, selection.username, selection.huntId, hunt.name);
+
+  activeClaims[selection.huntId] = {
+    user: user.id,
+    username: selection.username,
+    channel: selection.channel,
     timestamp: startTime,
-    endTime: endTime
+    endTime: endTime,
+    duration: duration,
+    tempChannel: tempChannel ? tempChannel.id : null
   };
 
   const endTimeFormatted = formatBrasiliaTime(endTime);
 
-  const embed = new EmbedBuilder()
-    .setColor('#00FF00')
-    .setTitle('✅ Claim Realizado!')
-    .setDescription(`**${hunt.name}** foi claimed por <@${message.author.id}>`)
-    .addFields(
-      { name: '📍 Hunt', value: hunt.name, inline: true },
-      { name: '⏱️ Duração', value: `${hunt.duration} minutos`, inline: true },
-      { name: '🕐 Expira às', value: endTimeFormatted, inline: true }
-    )
-    .setFooter({ text: `Use !terminar ${huntId} para liberar | !tempo ${huntId} para ver tempo restante • Horário de Brasília` })
-    .setTimestamp();
+  const originalChannel = client.channels.cache.get(selection.channel);
+  if (originalChannel) {
+    const embed = new EmbedBuilder()
+      .setColor('#00FF00')
+      .setTitle('✅ Claim Realizado!')
+      .setDescription(`**${hunt.name}** foi claimed por <@${user.id}>`)
+      .addFields(
+        { name: '📍 Hunt', value: hunt.name, inline: true },
+        { name: '⏱️ Duração', value: `${duration} minutos (${durationInfo.label})`, inline: true },
+        { name: '🕐 Expira às', value: endTimeFormatted, inline: true }
+      )
+      .setFooter({ text: 'Horário de Brasília (UTC-3)' })
+      .setTimestamp();
 
-  // Adiciona informação de NEXT se houver
-  if (nextQueue[huntId] && nextQueue[huntId].length > 0) {
-    let queueText = '';
-    nextQueue[huntId].forEach((next, index) => {
-      const nextStart = formatBrasiliaTime(next.startTime);
-      const nextEnd = formatBrasiliaTime(next.endTime);
-      queueText += `**Fila ${index + 1}:** <@${next.user}> | 🕐 ${nextStart}-${nextEnd}\n`;
-    });
-    
-    embed.addFields({
-      name: '\n🔔 PRÓXIMOS NA FILA',
-      value: queueText,
-      inline: false
-    });
+    await originalChannel.send({ embeds: [embed] });
   }
 
-  await message.reply({ embeds: [embed] });
-  
-  // Recalcula a fila de next (caso o horário tenha mudado)
-  recalculateQueue(huntId);
-  
-  // Atualiza canal de status
+  if (tempChannel) {
+    await sendTempChannelMessage(tempChannel, selection.huntId, user.id, duration, endTime);
+  }
+
+  delete pendingDurationSelection[messageId];
+  reaction.message.delete().catch(() => {});
+
   await updateStatusChannel();
 }
 
-// Comando: !next <hunt> - Entrar na fila da hunt
-async function nextHunt(message, huntId) {
+function getTimeRemainingDetailed(endTime) {
+  const now = Date.now();
+  const diff = endTime - now;
+
+  if (diff <= 0) {
+    return '⏰ **EXPIRADO**';
+  }
+
+  const hours = Math.floor(diff / (1000 * 60 * 60));
+  const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+
+  if (hours > 0) {
+    return `${hours}h ${minutes}min`;
+  } else {
+    return `${minutes}min`;
+  }
+}
+
+function checkTime(message, huntId) {
   const hunt = HUNTS[huntId];
   
   if (!hunt) {
     return message.reply(`❌ Hunt não encontrada! Use \`!hunts\` ou \`!lista\` para ver as hunts disponíveis.`);
   }
 
-  // Verifica se a hunt está claimed
-  const claim = activeClaims[huntId];
-  if (!claim) {
-    return message.reply(`❌ **${hunt.name}** não está claimed ainda! Faça \`!claim ${huntId}\` para claimar diretamente.`);
-  }
-
-  // Verifica se o usuário já é o dono do claim atual
-  if (claim.user === message.author.id) {
-    return message.reply(`❌ Você já está com esta hunt claimed! Use \`!terminar ${huntId}\` quando terminar.`);
-  }
-
-  // Inicializa a fila se não existir
-  if (!nextQueue[huntId]) {
-    nextQueue[huntId] = [];
-  }
-
-  // Verifica se o usuário já está na fila
-  const alreadyInQueue = nextQueue[huntId].find(n => n.user === message.author.id);
-  if (alreadyInQueue) {
-    const startFormatted = formatBrasiliaTime(alreadyInQueue.startTime);
-    const endFormatted = formatBrasiliaTime(alreadyInQueue.endTime);
-    return message.reply(`❌ Você já está na fila desta hunt!\n⏰ Seu horário: **${startFormatted}** até **${endFormatted}**`);
-  }
-
-  // Verifica limite de 5 pessoas na fila
-  if (nextQueue[huntId].length >= 5) {
-    return message.reply(`❌ A fila de **${hunt.name}** está cheia! (máximo 5 pessoas)`);
-  }
-
-  // Calcula horário do next
-  let startTime;
-  if (nextQueue[huntId].length === 0) {
-    // Primeiro da fila - começa quando o claim atual terminar
-    startTime = claim.endTime;
-  } else {
-    // Próximo da fila - começa quando o anterior terminar
-    const lastInQueue = nextQueue[huntId][nextQueue[huntId].length - 1];
-    startTime = lastInQueue.endTime;
-  }
-
-  const endTime = startTime + (hunt.duration * 60 * 1000);
-
-  // Verifica se não ultrapassa 10 horas no futuro
-  const maxFutureTime = Date.now() + (10 * 60 * 60 * 1000); // 10 horas
-  if (startTime > maxFutureTime) {
-    return message.reply(`❌ Não é possível reservar! O horário ultrapassaria o limite de 10 horas no futuro.`);
-  }
-
-  // Adiciona à fila
-  nextQueue[huntId].push({
-    user: message.author.id,
-    username: message.author.username,
-    startTime: startTime,
-    endTime: endTime,
-    channel: message.channel.id
-  });
-
-  const startFormatted = formatBrasiliaTime(startTime);
-  const endFormatted = formatBrasiliaTime(endTime);
-  const position = nextQueue[huntId].length;
-
-  const embed = new EmbedBuilder()
-    .setColor('#FFD700')
-    .setTitle('✅ Next Confirmado!')
-    .setDescription(`Você entrou na fila de **${hunt.name}**`)
-    .addFields(
-      { name: '📍 Hunt', value: hunt.name, inline: true },
-      { name: '📊 Posição na Fila', value: `Fila ${position}`, inline: true },
-      { name: '⏱️ Duração', value: `${hunt.duration} minutos`, inline: true },
-      { name: '🕐 Inicia às', value: startFormatted, inline: true },
-      { name: '🕐 Termina às', value: endFormatted, inline: true },
-      { name: '👤 Claimed por', value: `<@${message.author.id}>`, inline: true }
-    )
-    .setFooter({ text: `Use !cancelnext ${huntId} para cancelar • Horário de Brasília` })
-    .setTimestamp();
-
-  await message.reply({ embeds: [embed] });
-  
-  // Atualiza canal de status
-  await updateStatusChannel();
-}
-
-// Comando: !cancelnext <hunt> - Cancelar seu next
-async function cancelNext(message, huntId) {
-  const hunt = HUNTS[huntId];
-  
-  if (!hunt) {
-    return message.reply(`❌ Hunt não encontrada!`);
-  }
-
-  if (!nextQueue[huntId] || nextQueue[huntId].length === 0) {
-    return message.reply(`❌ Não há ninguém na fila de **${hunt.name}**!`);
-  }
-
-  const userIndex = nextQueue[huntId].findIndex(n => n.user === message.author.id);
-  
-  if (userIndex === -1) {
-    return message.reply(`❌ Você não está na fila de **${hunt.name}**!`);
-  }
-
-  const removed = nextQueue[huntId].splice(userIndex, 1)[0];
-
-  // Recalcula horários da fila
-  recalculateQueue(huntId);
-
-  await message.reply(`✅ Seu next em **${hunt.name}** foi cancelado!`);
-  
-  // Atualiza canal de status
-  await updateStatusChannel();
-}
-
-// Recalcula os horários da fila após remoção
-function recalculateQueue(huntId) {
-  if (!nextQueue[huntId] || nextQueue[huntId].length === 0) return;
-
-  const claim = activeClaims[huntId];
-  const hunt = HUNTS[huntId];
-  
-  let previousEndTime = claim ? claim.endTime : Date.now();
-
-  for (let i = 0; i < nextQueue[huntId].length; i++) {
-    nextQueue[huntId][i].startTime = previousEndTime;
-    nextQueue[huntId][i].endTime = previousEndTime + (hunt.duration * 60 * 1000);
-    previousEndTime = nextQueue[huntId][i].endTime;
-  }
-}
-
-// Comando: !tempo <hunt> - Ver tempo restante
-function checkTime(message, huntId) {
-  const hunt = HUNTS[huntId];
-  
-  if (!hunt) {
-    return message.reply(`❌ Hunt não encontrada!`);
-  }
-
   const claim = activeClaims[huntId];
   
   if (!claim) {
-    return message.reply(`✅ **${hunt.name}** está disponível! Ninguém claimou ainda.`);
+    return message.reply(`✅ **${hunt.name}** está disponível para claim!`);
   }
 
   const timeRemaining = getTimeRemainingDetailed(claim.endTime);
-  const endTimeFormatted = formatBrasiliaTime(claim.endTime);
-
+  const endTime = formatBrasiliaTime(claim.endTime);
+  
   const embed = new EmbedBuilder()
-    .setColor('#FFA500')
-    .setTitle('⏰ Tempo Restante')
-    .setDescription(`**${hunt.name}**`)
+    .setColor('#FFD700')
+    .setTitle(`⏰ Status: ${hunt.name}`)
     .addFields(
       { name: '👤 Claimed por', value: `<@${claim.user}>`, inline: true },
-      { name: '⏱️ Tempo restante', value: timeRemaining, inline: true },
-      { name: '🕐 Expira às', value: endTimeFormatted, inline: true }
+      { name: '⏱️ Duração', value: `${claim.duration} minutos`, inline: true },
+      { name: '⏰ Tempo restante', value: timeRemaining, inline: false },
+      { name: '🕐 Expira às', value: endTime, inline: true },
+      { name: '📅 Horário', value: 'Brasília (UTC-3)', inline: true }
     )
-    .setFooter({ text: 'Horário de Brasília (UTC-3)' })
+    .setTimestamp();
+
+  if (nextQueue[huntId] && nextQueue[huntId].length > 0) {
+    let queueText = '';
+    nextQueue[huntId].forEach((next, index) => {
+      const nextStart = formatBrasiliaTime(next.startTime);
+      const nextEnd = formatBrasiliaTime(next.endTime);
+      queueText += `**${index + 1}.** <@${next.user}> | 🕐 ${nextStart}-${nextEnd}\n`;
+    });
+    
+    embed.addFields({
+      name: `\n🔔 FILA (${nextQueue[huntId].length}/5)`,
+      value: queueText,
+      inline: false
+    });
+  }
+
+  message.reply({ embeds: [embed] });
+}
+
+function showQueue(message, huntId) {
+  const hunt = HUNTS[huntId];
+  
+  if (!hunt) {
+    return message.reply(`❌ Hunt não encontrada! Use \`!hunts\` ou \`!lista\` para ver as hunts disponíveis.`);
+  }
+
+  if (!nextQueue[huntId] || nextQueue[huntId].length === 0) {
+    return message.reply(`ℹ️ **${hunt.name}** não tem ninguém na fila.`);
+  }
+
+  let queueText = '';
+  nextQueue[huntId].forEach((next, index) => {
+    const nextStart = formatBrasiliaDateTime(next.startTime);
+    const nextEnd = formatBrasiliaDateTime(next.endTime);
+    queueText += `**${index + 1}.** <@${next.user}>\n`;
+    queueText += `   🕐 Início: ${nextStart}\n`;
+    queueText += `   🕐 Fim: ${nextEnd}\n`;
+    queueText += `   ⏱️ Duração: ${next.duration} minutos\n\n`;
+  });
+
+  const embed = new EmbedBuilder()
+    .setColor('#FFD700')
+    .setTitle(`🔔 Fila: ${hunt.name}`)
+    .setDescription(queueText)
+    .setFooter({ text: `${nextQueue[huntId].length}/5 pessoas na fila` })
     .setTimestamp();
 
   message.reply({ embeds: [embed] });
 }
 
-// Verifica se o usuário é administrador
-function isAdmin(message) {
-  return message.member.permissions.has(PermissionFlagsBits.Administrator);
-}
-
-// Comando: !release <hunt> - Liberar uma hunt
-async function releaseHunt(message, huntId) {
+async function addToQueue(reaction, user, huntId) {
   const hunt = HUNTS[huntId];
-  
-  if (!hunt) {
-    return message.reply(`❌ Hunt não encontrada!`);
-  }
-
   const claim = activeClaims[huntId];
   
   if (!claim) {
-    return message.reply(`❌ **${hunt.name}** não está claimed!`);
+    return;
   }
 
-  if (claim.user !== message.author.id) {
-    return message.reply(`❌ Você não pode liberar essa hunt! Ela foi claimed por <@${claim.user}>`);
+  if (!nextQueue[huntId]) {
+    nextQueue[huntId] = [];
   }
 
-  // Verifica se há próximo na fila
-  const hasNext = nextQueue[huntId] && nextQueue[huntId].length > 0;
+  if (nextQueue[huntId].length >= 5) {
+    const tempMessage = await reaction.message.channel.send(`❌ <@${user.id}> A fila de **${hunt.name}** está cheia (máximo 5 pessoas)!`);
+    setTimeout(() => tempMessage.delete().catch(() => {}), 5000);
+    return;
+  }
+
+  const alreadyInQueue = nextQueue[huntId].some(next => next.user === user.id);
+  if (alreadyInQueue) {
+    const tempMessage = await reaction.message.channel.send(`❌ <@${user.id}> Você já está na fila de **${hunt.name}**!`);
+    setTimeout(() => tempMessage.delete().catch(() => {}), 5000);
+    return;
+  }
+
+  if (claim.user === user.id) {
+    const tempMessage = await reaction.message.channel.send(`❌ <@${user.id}> Você não pode entrar na fila da sua própria hunt!`);
+    setTimeout(() => tempMessage.delete().catch(() => {}), 5000);
+    return;
+  }
+
+  const embed = new EmbedBuilder()
+    .setColor('#FFD700')
+    .setTitle('⏱️ Escolha a Duração para a Fila')
+    .setDescription(`**${hunt.name}**\n\nClique em uma das reações abaixo para definir quanto tempo você vai ficar quando for sua vez:`)
+    .addFields(
+      { name: '1️⃣', value: '**1h 15min** (75 minutos)', inline: true },
+      { name: '2️⃣', value: '**2h 15min** (135 minutos)', inline: true },
+      { name: '3️⃣', value: '**3h 15min** (195 minutos)', inline: true }
+    )
+    .setFooter({ text: 'Você tem 60 segundos para escolher' })
+    .setTimestamp();
+
+  const selectionMessage = await reaction.message.channel.send({ content: `<@${user.id}>`, embeds: [embed] });
   
+  await selectionMessage.react('1️⃣');
+  await selectionMessage.react('2️⃣');
+  await selectionMessage.react('3️⃣');
+
+  pendingDurationSelection[selectionMessage.id] = {
+    huntId: huntId,
+    userId: user.id,
+    username: user.username,
+    channel: reaction.message.channel.id,
+    guildId: reaction.message.guild.id,
+    timestamp: Date.now(),
+    isQueue: true
+  };
+
+  setTimeout(() => {
+    if (pendingDurationSelection[selectionMessage.id]) {
+      delete pendingDurationSelection[selectionMessage.id];
+      selectionMessage.delete().catch(() => {});
+    }
+  }, 60000);
+}
+
+async function processQueueDurationSelection(reaction, user, messageId) {
+  const selection = pendingDurationSelection[messageId];
+  if (!selection || selection.userId !== user.id || !selection.isQueue) return;
+
+  const emoji = reaction.emoji.name;
+  const durationInfo = DURATION_EMOJIS[emoji];
+  
+  if (!durationInfo || !durationInfo.duration) return;
+
+  const hunt = HUNTS[selection.huntId];
+  const duration = durationInfo.duration;
+
+  let startTime = activeClaims[selection.huntId].endTime;
+  
+  if (nextQueue[selection.huntId] && nextQueue[selection.huntId].length > 0) {
+    const lastInQueue = nextQueue[selection.huntId][nextQueue[selection.huntId].length - 1];
+    startTime = lastInQueue.endTime;
+  }
+
+  const endTime = startTime + (duration * 60 * 1000);
+
+  nextQueue[selection.huntId].push({
+    user: user.id,
+    username: user.username,
+    channel: selection.channel,
+    duration: duration,
+    startTime: startTime,
+    endTime: endTime
+  });
+
+  const position = nextQueue[selection.huntId].length;
+  const startTimeFormatted = formatBrasiliaDateTime(startTime);
+  const endTimeFormatted = formatBrasiliaDateTime(endTime);
+
+  const originalChannel = client.channels.cache.get(selection.channel);
+  if (originalChannel) {
+    const embed = new EmbedBuilder()
+      .setColor('#00FF00')
+      .setTitle('✅ Adicionado à Fila!')
+      .setDescription(`<@${user.id}> entrou na fila de **${hunt.name}**`)
+      .addFields(
+        { name: '📍 Posição', value: `${position}º na fila`, inline: true },
+        { name: '⏱️ Duração', value: `${duration} minutos`, inline: true },
+        { name: '🕐 Início previsto', value: startTimeFormatted, inline: false },
+        { name: '🕐 Fim previsto', value: endTimeFormatted, inline: false }
+      )
+      .setFooter({ text: 'Horário de Brasília (UTC-3)' })
+      .setTimestamp();
+
+    await originalChannel.send({ embeds: [embed] });
+  }
+
+  delete pendingDurationSelection[messageId];
+  reaction.message.delete().catch(() => {});
+
+  await updateTempChannels();
+}
+
+function recalculateQueue(huntId) {
+  if (!nextQueue[huntId] || nextQueue[huntId].length === 0) return;
+
+  let startTime = activeClaims[huntId].endTime;
+
+  nextQueue[huntId].forEach((next, index) => {
+    next.startTime = startTime;
+    next.endTime = startTime + (next.duration * 60 * 1000);
+    startTime = next.endTime;
+  });
+}
+
+async function finishHunt(reaction, user, huntId) {
+  const claim = activeClaims[huntId];
+  
+  if (!claim) return;
+
+  if (claim.user !== user.id) {
+    const tempMessage = await reaction.message.channel.send(`❌ <@${user.id}> Apenas quem deu o claim pode finalizar a hunt!`);
+    setTimeout(() => tempMessage.delete().catch(() => {}), 5000);
+    return;
+  }
+
+  const hunt = HUNTS[huntId];
+  const originalChannel = client.channels.cache.get(claim.channel);
+
+  const hasNext = nextQueue[huntId] && nextQueue[huntId].length > 0;
+
   if (hasNext) {
-    const nextPerson = nextQueue[huntId].shift(); // Remove primeiro da fila
+    const nextPerson = nextQueue[huntId].shift();
     
-    // Claim automático para o próximo
     const startTime = Date.now();
-    const endTime = startTime + (hunt.duration * 60 * 1000);
+    const endTime = startTime + (nextPerson.duration * 60 * 1000);
+    
+    await deleteTempChannel(claim.tempChannel);
+    
+    const guild = reaction.message.guild;
+    const tempChannel = await createTempChannel(guild, nextPerson.user, nextPerson.username, huntId, hunt.name);
     
     activeClaims[huntId] = {
       user: nextPerson.user,
       username: nextPerson.username,
       channel: nextPerson.channel,
       timestamp: startTime,
-      endTime: endTime
+      endTime: endTime,
+      duration: nextPerson.duration,
+      tempChannel: tempChannel ? tempChannel.id : null
     };
     
-    // Recalcula fila restante
     recalculateQueue(huntId);
     
     const endTimeFormatted = formatBrasiliaTime(endTime);
     
-    const embed = new EmbedBuilder()
-      .setColor('#00FF00')
-      .setTitle('🔔 Próximo da Fila Ativado!')
-      .setDescription(`<@${message.author.id}> terminou!\n**${hunt.name}** agora é de <@${nextPerson.user}>`)
-      .addFields(
-        { name: '📍 Hunt', value: hunt.name, inline: true },
-        { name: '⏱️ Duração', value: `${hunt.duration} minutos`, inline: true },
-        { name: '🕐 Expira às', value: endTimeFormatted, inline: true }
-      )
-      .setFooter({ text: 'Horário de Brasília' })
-      .setTimestamp();
-    
-    // Mostra próximo se ainda houver fila
-    if (nextQueue[huntId] && nextQueue[huntId].length > 0) {
-      let queueText = '';
-      nextQueue[huntId].forEach((next, index) => {
-        const nextStart = formatBrasiliaTime(next.startTime);
-        const nextEnd = formatBrasiliaTime(next.endTime);
-        queueText += `**Fila ${index + 1}:** <@${next.user}> | 🕐 ${nextStart}-${nextEnd}\n`;
-      });
+    if (originalChannel) {
+      const embed = new EmbedBuilder()
+        .setColor('#00FF00')
+        .setTitle('✅ Hunt Finalizada - Próximo Ativado!')
+        .setDescription(`<@${user.id}> finalizou **${hunt.name}**!\nAgora é a vez de <@${nextPerson.user}>`)
+        .addFields(
+          { name: '📍 Hunt', value: hunt.name, inline: true },
+          { name: '⏱️ Duração', value: `${nextPerson.duration} minutos`, inline: true },
+          { name: '🕐 Expira às', value: endTimeFormatted, inline: true }
+        )
+        .setFooter({ text: 'Horário de Brasília (UTC-3)' })
+        .setTimestamp();
       
-      embed.addFields({
-        name: '\n🔔 PRÓXIMOS NA FILA',
-        value: queueText,
-        inline: false
-      });
+      await originalChannel.send({ embeds: [embed] });
     }
     
-    await message.reply({ embeds: [embed] });
-    
-    // Notifica o próximo
-    try {
-      const nextChannel = client.channels.cache.get(nextPerson.channel);
-      if (nextChannel) {
-        await nextChannel.send(`🔔 <@${nextPerson.user}> Sua vez em **${hunt.name}**! A hunt já está claimed para você até **${endTimeFormatted}**!`);
-      }
-    } catch (error) {
-      console.error('Erro ao notificar próximo:', error);
+    if (tempChannel) {
+      await sendTempChannelMessage(tempChannel, huntId, nextPerson.user, nextPerson.duration, endTime);
     }
   } else {
+    if (originalChannel) {
+      const embed = new EmbedBuilder()
+        .setColor('#00FF00')
+        .setTitle('✅ Hunt Finalizada')
+        .setDescription(`<@${user.id}> finalizou **${hunt.name}**!\nA hunt está disponível novamente! 🎉`)
+        .setTimestamp();
+      
+      await originalChannel.send({ embeds: [embed] });
+    }
+    
+    await deleteTempChannel(claim.tempChannel);
     delete activeClaims[huntId];
-    await message.reply(`✅ **${hunt.name}** foi liberada e está disponível novamente!`);
   }
-  
-  // Atualiza canal de status
+
   await updateStatusChannel();
 }
 
-// Comando: !forcerelease <hunt> - Forçar liberação (ADMIN)
-async function forceReleaseHunt(message, huntId) {
-  if (!isAdmin(message)) {
-    return message.reply(`❌ Este comando é apenas para administradores!`);
+function showStatus(message) {
+  if (Object.keys(activeClaims).length === 0) {
+    return message.reply('✅ Não há nenhum claim ativo no momento!');
+  }
+
+  const categories = {};
+  
+  for (const [id, claim] of Object.entries(activeClaims)) {
+    const hunt = HUNTS[id];
+    const category = hunt.category;
+    
+    if (!categories[category]) {
+      categories[category] = [];
+    }
+    
+    const timeRemaining = getTimeRemainingDetailed(claim.endTime);
+    const endTime = formatBrasiliaTime(claim.endTime);
+    
+    categories[category].push({
+      name: hunt.name,
+      user: claim.user,
+      time: timeRemaining,
+      endTime: endTime,
+      duration: claim.duration,
+      expired: Date.now() >= claim.endTime,
+      hasQueue: nextQueue[id] && nextQueue[id].length > 0,
+      queueLength: nextQueue[id] ? nextQueue[id].length : 0
+    });
+  }
+
+  for (const [category, claims] of Object.entries(categories)) {
+    let description = '';
+    
+    claims.forEach(claim => {
+      const status = claim.expired ? '🔴' : '🟢';
+      description += `${status} **${claim.name}**\n`;
+      description += `   👤 <@${claim.user}>\n`;
+      description += `   ⏰ ${claim.time}\n`;
+      description += `   🕐 Expira: ${claim.endTime}\n`;
+      description += `   ⏱️ Duração: ${claim.duration}min\n`;
+      
+      if (claim.hasQueue) {
+        description += `   🔔 Fila: ${claim.queueLength} pessoa(s)\n`;
+      }
+      
+      description += '\n';
+    });
+
+    const embed = new EmbedBuilder()
+      .setColor(category === 'HARD' ? '#FF0000' : category === 'VIP' ? '#FFD700' : category === 'INFERNIAK' ? '#FF6600' : category === 'WARZONE' ? '#8B00FF' : '#00FF00')
+      .setTitle(`📍 ${category}`)
+      .setDescription(description)
+      .setFooter({ text: '🕐 Horário de Brasília (UTC-3)' })
+      .setTimestamp();
+
+    message.channel.send({ embeds: [embed] });
+  }
+}
+
+function listSimple(message) {
+  const available = [];
+  const claimed = [];
+
+  for (const [id, hunt] of Object.entries(HUNTS)) {
+    if (activeClaims[id]) {
+      const claim = activeClaims[id];
+      const time = getTimeRemainingDetailed(claim.endTime);
+      claimed.push(`🔴 **${hunt.name}** - <@${claim.user}> (${time})`);
+    } else {
+      available.push(`🟢 **${hunt.name}**`);
+    }
+  }
+
+  const embedAvailable = new EmbedBuilder()
+    .setColor('#00FF00')
+    .setTitle('✅ Hunts Disponíveis')
+    .setDescription(available.length > 0 ? available.join('\n') : 'Nenhuma hunt disponível')
+    .setFooter({ text: `${available.length} hunts disponíveis` })
+    .setTimestamp();
+
+  const embedClaimed = new EmbedBuilder()
+    .setColor('#FF0000')
+    .setTitle('🔴 Hunts Claimed')
+    .setDescription(claimed.length > 0 ? claimed.join('\n') : 'Nenhuma hunt claimed')
+    .setFooter({ text: `${claimed.length} hunts claimed` })
+    .setTimestamp();
+
+  message.channel.send({ embeds: [embedAvailable, embedClaimed] });
+}
+
+function removeClaim(message, huntId) {
+  if (!message.member.permissions.has(PermissionFlagsBits.Administrator)) {
+    return message.reply('❌ Você precisa ser administrador para usar este comando!');
   }
 
   const hunt = HUNTS[huntId];
   
   if (!hunt) {
-    return message.reply(`❌ Hunt não encontrada!`);
+    return message.reply(`❌ Hunt não encontrada! Use \`!hunts\` ou \`!lista\` para ver as hunts disponíveis.`);
   }
 
   const claim = activeClaims[huntId];
   
   if (!claim) {
-    return message.reply(`❌ **${hunt.name}** não está claimed!`);
+    return message.reply(`ℹ️ **${hunt.name}** não está claimed.`);
   }
 
-  const claimedBy = claim.username;
+  deleteTempChannel(claim.tempChannel);
   delete activeClaims[huntId];
   
-  const embed = new EmbedBuilder()
-    .setColor('#FF0000')
-    .setTitle('🔨 Claim Removido (Admin)')
-    .setDescription(`**${hunt.name}** foi liberada por um administrador`)
-    .addFields(
-      { name: '👤 Estava claimed por', value: claimedBy, inline: true },
-      { name: '🛡️ Liberado por', value: message.author.username, inline: true }
-    )
-    .setTimestamp();
+  if (nextQueue[huntId]) {
+    delete nextQueue[huntId];
+  }
 
-  await message.reply({ embeds: [embed] });
+  message.reply(`✅ Claim de **${hunt.name}** removido com sucesso! A hunt está disponível novamente.`);
   
-  // Atualiza canal de status
-  await updateStatusChannel();
+  updateStatusChannel();
 }
 
-// Comando: !clearall - Limpar todos os claims (ADMIN)
-async function clearAllClaims(message) {
-  if (!isAdmin(message)) {
-    return message.reply(`❌ Este comando é apenas para administradores!`);
+function clearAllClaims(message) {
+  if (!message.member.permissions.has(PermissionFlagsBits.Administrator)) {
+    return message.reply('❌ Você precisa ser administrador para usar este comando!');
   }
 
-  const claimCount = Object.keys(activeClaims).length;
-  
-  if (claimCount === 0) {
-    return message.reply(`✅ Não há claims ativos para limpar!`);
-  }
+  const count = Object.keys(activeClaims).length;
 
-  // Limpa todos os claims
-  for (const huntId in activeClaims) {
+  for (const [huntId, claim] of Object.entries(activeClaims)) {
+    deleteTempChannel(claim.tempChannel);
     delete activeClaims[huntId];
   }
 
-  const embed = new EmbedBuilder()
-    .setColor('#FF0000')
-    .setTitle('🧹 Todos os Claims Removidos')
-    .setDescription(`**${claimCount} claim(s)** foram removidos por um administrador`)
-    .addFields(
-      { name: '🛡️ Removido por', value: message.author.username }
-    )
-    .setTimestamp();
+  for (const huntId in nextQueue) {
+    delete nextQueue[huntId];
+  }
 
-  await message.reply({ embeds: [embed] });
+  message.reply(`✅ Todos os ${count} claims foram removidos! Todas as hunts estão disponíveis novamente.`);
   
-  // Atualiza canal de status
-  await updateStatusChannel();
+  updateStatusChannel();
 }
 
-// Comando: !limpasala - Limpar todas as mensagens do canal (ADMIN)
 async function clearChannel(message) {
-  if (!isAdmin(message)) {
-    return message.reply(`❌ Este comando é apenas para administradores!`);
+  if (!message.member.permissions.has(PermissionFlagsBits.Administrator)) {
+    return message.reply('❌ Você precisa ser administrador para usar este comando!');
   }
 
   try {
-    let totalDeleted = 0;
-    let hasMore = true;
-    
-    await message.reply('🧹 Iniciando limpeza do canal...');
-    
-    // Loop para deletar todas as mensagens
-    while (hasMore) {
-      // Busca até 100 mensagens (limite da API)
-      const fetched = await message.channel.messages.fetch({ limit: 100 });
+    let deleted = 0;
+    let fetched;
+
+    do {
+      fetched = await message.channel.messages.fetch({ limit: 100 });
       
-      if (fetched.size === 0) {
-        hasMore = false;
-        break;
-      }
-      
-      // Filtra mensagens com menos de 14 dias (podem ser deletadas em bulk)
-      const recentMessages = fetched.filter(msg => {
-        const age = Date.now() - msg.createdTimestamp;
-        return age < 1209600000; // 14 dias em milissegundos
+      const deletableMessages = fetched.filter(msg => {
+        const diff = Date.now() - msg.createdTimestamp;
+        return diff < 14 * 24 * 60 * 60 * 1000;
       });
-      
-      if (recentMessages.size > 1) {
-        // Deleta em bulk (mínimo 2 mensagens)
-        try {
-          await message.channel.bulkDelete(recentMessages, true);
-          totalDeleted += recentMessages.size;
-          console.log(`Deletadas ${recentMessages.size} mensagens em bulk`);
-        } catch (err) {
-          console.error('Erro no bulkDelete:', err);
-        }
-      } else if (recentMessages.size === 1) {
-        // Se só tem 1 mensagem, deleta individualmente
-        try {
-          await recentMessages.first().delete();
-          totalDeleted++;
-        } catch (err) {
-          console.error('Erro ao deletar mensagem única:', err);
-        }
+
+      if (deletableMessages.size > 0) {
+        await message.channel.bulkDelete(deletableMessages, true);
+        deleted += deletableMessages.size;
       }
+
+      if (fetched.size < 100) break;
       
-      // Verifica se há mensagens antigas (mais de 14 dias)
-      const oldMessages = fetched.filter(msg => {
-        const age = Date.now() - msg.createdTimestamp;
-        return age >= 1209600000;
-      });
-      
-      // Deleta mensagens antigas uma por uma
-      if (oldMessages.size > 0) {
-        for (const [id, msg] of oldMessages) {
-          try {
-            await msg.delete();
-            totalDeleted++;
-            console.log(`Deletada mensagem antiga: ${id}`);
-            // Delay para evitar rate limit
-            await new Promise(resolve => setTimeout(resolve, 1500));
-          } catch (err) {
-            console.error('Erro ao deletar mensagem antiga:', err);
-          }
-        }
-      }
-      
-      // Se deletou menos de 100 mensagens, provavelmente acabou
-      if (fetched.size < 100) {
-        hasMore = false;
-      }
-      
-      // Pequeno delay entre lotes
       await new Promise(resolve => setTimeout(resolve, 1000));
-    }
-    
-    // Mensagem final
-    const finalMsg = await message.channel.send(`✅ **Canal limpo!**\n🗑️ ${totalDeleted} mensagens deletadas\n👤 Por: ${message.author.username}`);
-    
-    // Auto-deleta após 10 segundos
-    setTimeout(() => {
-      finalMsg.delete().catch(() => {});
-    }, 10000);
-    
+    } while (fetched.size >= 2);
+
+    const confirmMsg = await message.channel.send(`✅ ${deleted} mensagens foram deletadas!`);
+    setTimeout(() => confirmMsg.delete().catch(() => {}), 5000);
   } catch (error) {
     console.error('Erro ao limpar canal:', error);
-    message.channel.send('❌ Erro ao limpar o canal. Verifique se o bot tem permissão de **"Gerenciar Mensagens"**!').catch(() => {});
+    message.reply('❌ Erro ao limpar o canal. Verifique as permissões do bot.');
   }
 }
 
-// Comando: !status - Ver todos os claims ativos
-function showStatus(message) {
-  const embed = new EmbedBuilder()
-    .setColor('#0099FF')
-    .setTitle('📊 Status dos Claims Ativos')
-    .setDescription('Todas as hunts claimed no momento')
-    .setFooter({ text: 'Horário de Brasília (UTC-3)' })
-    .setTimestamp();
-
-  let hasActiveClaims = false;
-
-  for (const [id, claim] of Object.entries(activeClaims)) {
-    hasActiveClaims = true;
-    const hunt = HUNTS[id];
-    const timeRemaining = getTimeRemainingDetailed(claim.endTime);
-    const endTimeFormatted = formatBrasiliaTime(claim.endTime);
-    
-    embed.addFields({
-      name: `🔹 ${hunt.name}`,
-      value: `👤 <@${claim.user}>\n⏰ ${timeRemaining}\n🕐 Expira: ${endTimeFormatted}`,
-      inline: true
-    });
-  }
-
-  if (!hasActiveClaims) {
-    embed.setDescription('✅ Nenhuma hunt claimed no momento! Todas disponíveis! 🎉');
-  }
-
-  message.reply({ embeds: [embed] });
-}
-
-// Calcula tempo restante detalhado
-function getTimeRemainingDetailed(endTime) {
-  const now = Date.now();
-  const remaining = endTime - now;
-
-  if (remaining <= 0) return '⏰ EXPIRADO';
-
-  const hours = Math.floor(remaining / (1000 * 60 * 60));
-  const minutes = Math.floor((remaining % (1000 * 60 * 60)) / (1000 * 60));
-  const seconds = Math.floor((remaining % (1000 * 60)) / 1000);
-
-  if (hours > 0) {
-    return `${hours}h ${minutes}m ${seconds}s`;
-  } else {
-    return `${minutes}m ${seconds}s`;
-  }
-}
-
-// Comando !lista - Lista simplificada
-function simpleList(message) {
-  let available = '**🟢 DISPONÍVEIS:**\n';
-  let claimed = '\n**🔴 CLAIMED:**\n';
-  
-  for (const [id, hunt] of Object.entries(HUNTS)) {
-    if (activeClaims[id]) {
-      const time = getTimeRemainingDetailed(activeClaims[id].endTime);
-      const endTime = formatBrasiliaTime(activeClaims[id].endTime);
-      claimed += `❌ **${hunt.name}**\n`;
-      claimed += `   👤 <@${activeClaims[id].user}> | ⏰ ${time} | 🕐 ${endTime}\n`;
-      
-      // Mostra fila de next se houver
-      if (nextQueue[id] && nextQueue[id].length > 0) {
-        claimed += `   🔔 **Fila (${nextQueue[id].length}):**\n`;
-        nextQueue[id].forEach((next, index) => {
-          const nextStart = formatBrasiliaTime(next.startTime);
-          const nextEnd = formatBrasiliaTime(next.endTime);
-          claimed += `      **Fila ${index + 1}:** <@${next.user}> | 🕐 ${nextStart}-${nextEnd}\n`;
-        });
-      }
-      claimed += '\n';
-    } else {
-      available += `✅ ${hunt.name} (\`${id}\`)\n`;
-    }
-  }
-
-  // Separa em mensagens se for muito longo
-  if ((available + claimed).length > 2000) {
-    message.reply(available);
-    message.channel.send(claimed);
-  } else {
-    message.reply(available + claimed);
-  }
-}
-
-// Comando !fila <hunt> - Ver fila detalhada de uma hunt
-function showQueue(message, huntId) {
-  const hunt = HUNTS[huntId];
-  
-  if (!hunt) {
-    return message.reply(`❌ Hunt não encontrada!`);
-  }
-
-  const claim = activeClaims[huntId];
-  
-  if (!claim) {
-    return message.reply(`❌ **${hunt.name}** não está claimed! Não há fila.`);
-  }
-
-  const embed = new EmbedBuilder()
-    .setColor('#0099FF')
-    .setTitle(`📋 Fila de ${hunt.name}`)
-    .setTimestamp();
-
-  // Mostra claim atual
-  const timeRemaining = getTimeRemainingDetailed(claim.endTime);
-  const endTime = formatBrasiliaTime(claim.endTime);
-  
-  let description = `**🔴 CLAIM ATUAL:**\n`;
-  description += `👤 <@${claim.user}> (${claim.username})\n`;
-  description += `⏰ ${timeRemaining} | 🕐 Termina: ${endTime}\n\n`;
-
-  // Mostra fila
-  if (nextQueue[huntId] && nextQueue[huntId].length > 0) {
-    description += `**🔔 FILA (${nextQueue[huntId].length}/5):**\n`;
-    nextQueue[huntId].forEach((next, index) => {
-      const nextStart = formatBrasiliaTime(next.startTime);
-      const nextEnd = formatBrasiliaTime(next.endTime);
-      description += `**Fila ${index + 1}:** 👤 <@${next.user}> (${next.username})\n`;
-      description += `   🕐 ${nextStart} até ${nextEnd}\n`;
-    });
-  } else {
-    description += `**🔔 FILA:** Vazia\n`;
-    description += `Use \`!next ${huntId}\` para entrar na fila!`;
-  }
-
-  embed.setDescription(description);
-  embed.setFooter({ text: 'Horário de Brasília (UTC-3)' });
-
-  message.reply({ embeds: [embed] });
-}
-
-// Processa mensagens
-client.on('messageCreate', async message => {
+client.on('messageCreate', async (message) => {
   if (message.author.bot) return;
+  if (!message.content.startsWith('!')) return;
 
-  const content = message.content.toLowerCase().trim();
-  const args = content.split(' ');
-  const command = args[0];
+  const args = message.content.slice(1).trim().split(/ +/);
+  const command = args[0].toLowerCase();
+  const huntId = args[1] ? args[1].toLowerCase() : null;
 
-  if (command === '!claim' && args[1]) {
-    await claimHunt(message, args[1]);
-  } else if (command === '!next' && args[1]) {
-    await nextHunt(message, args[1]);
-  } else if (command === '!cancelnext' && args[1]) {
-    await cancelNext(message, args[1]);
-  } else if (command === '!terminar' && args[1]) {
-    await releaseHunt(message, args[1]);
-  } else if (command === '!tempo' && args[1]) {
-    checkTime(message, args[1]);
-  } else if (command === '!status') {
-    showStatus(message);
-  } else if (command === '!hunts') {
-    listHunts(message);
-  } else if (command === '!lista') {
-    simpleList(message);
-  } else if (command === '!fila' && args[1]) {
-    showQueue(message, args[1]);
-  } else if (command === '!terminoja' && args[1]) {
-    await forceReleaseHunt(message, args[1]);
-  } else if (command === '!limparclaims') {
-    await clearAllClaims(message);
-  } else if (command === '!limpasala') {
-    await clearChannel(message);
-  } else if (command === '!testeadmin') {
-    // Comando de teste para verificar permissões
-    const isUserAdmin = isAdmin(message);
-    const botPerms = message.guild.members.cache.get(client.user.id).permissions;
-    
-    message.reply(`**Diagnóstico:**
-👤 Você é admin? ${isUserAdmin ? '✅ SIM' : '❌ NÃO'}
-🤖 Bot é admin? ${botPerms.has(PermissionFlagsBits.Administrator) ? '✅ SIM' : '❌ NÃO'}
-🗑️ Bot pode gerenciar mensagens? ${botPerms.has(PermissionFlagsBits.ManageMessages) ? '✅ SIM' : '❌ NÃO'}
-📝 Bot pode ler mensagens? ${botPerms.has(PermissionFlagsBits.ReadMessageHistory) ? '✅ SIM' : '❌ NÃO'}`);
-  } else if (command === '!criar-status') {
-    // Comando para criar manualmente o canal de status
-    const channel = await getOrCreateStatusChannel(message.guild);
-    if (channel) {
-      await updateStatusChannel();
-      message.reply(`✅ Canal de status criado/atualizado: <#${channel.id}>`);
-    }
-  } else if (command === '!help' || command === '!ajuda') {
-    const isUserAdmin = isAdmin(message);
-    
-    const helpEmbed = new EmbedBuilder()
-      .setColor('#FFD700')
-      .setTitle('📖 Comandos do Bot - Tibia Hunt Manager')
-      .setDescription('Sistema de gerenciamento de claims para hunts\n**Tempo por hunt: 2 horas (120 minutos)**\n**Sistema de Fila: até 10 horas no futuro**')
-      .addFields(
-        { name: '!claim <hunt>', value: 'Faz claim de uma hunt por 2h\nEx: `!claim inferniak-1`' },
-        { name: '!next <hunt>', value: '🔔 Entra na fila da hunt\nEx: `!next inferniak-1`' },
-        { name: '!cancelnext <hunt>', value: 'Cancela seu next na fila\nEx: `!cancelnext inferniak-1`' },
-        { name: '!fila <hunt>', value: '📋 Mostra a fila completa da hunt\nEx: `!fila inferniak-1`' },
-        { name: '!terminar <hunt>', value: 'Termina sua hunt claimed\nEx: `!terminar inferniak-1`' },
-        { name: '!tempo <hunt>', value: 'Verifica tempo restante de uma hunt\nEx: `!tempo inferniak-1`' },
-        { name: '!status', value: 'Mostra todos os claims ativos com tempos' },
-        { name: '!hunts', value: 'Lista todas as hunts com filas organizadas' },
-        { name: '!lista', value: 'Lista simplificada com filas' },
-        { name: '!criar-status', value: 'Cria canal #📊-hunt-status (automático)' },
-        { name: '!help ou !ajuda', value: 'Mostra esta mensagem' }
-      )
-      .setFooter({ text: 'Bot criado para gerenciamento de hunts' })
-      .setTimestamp();
-    
-    // Adiciona comandos de admin se o usuário for admin
-    if (isUserAdmin) {
-      helpEmbed.addFields(
-        { name: '\n🛡️ **COMANDOS ADMIN**', value: '━━━━━━━━━━━━━━━━━━━━' },
-        { name: '!terminoja <hunt>', value: '🔨 Remove claim de qualquer hunt\nEx: `!terminoja inferniak-1`' },
-        { name: '!limparclaims', value: '🧹 Remove TODOS os claims ativos' },
-        { name: '!limpasala', value: '🗑️ Deleta TODAS as mensagens do canal' }
-      );
-    }
-    
-    message.reply({ embeds: [helpEmbed] });
+  switch (command) {
+    case 'hunts':
+      listHunts(message);
+      break;
+
+    case 'lista':
+      listSimple(message);
+      break;
+
+    case 'claim':
+      if (!huntId) {
+        message.reply('❌ Use: `!claim <hunt>`\nExemplo: `!claim energy-vip`');
+      } else {
+        await claimHunt(message, huntId);
+      }
+      break;
+
+    case 'tempo':
+      if (!huntId) {
+        message.reply('❌ Use: `!tempo <hunt>`\nExemplo: `!tempo energy-vip`');
+      } else {
+        checkTime(message, huntId);
+      }
+      break;
+
+    case 'fila':
+      if (!huntId) {
+        message.reply('❌ Use: `!fila <hunt>`\nExemplo: `!fila energy-vip`');
+      } else {
+        showQueue(message, huntId);
+      }
+      break;
+
+    case 'status':
+      showStatus(message);
+      break;
+
+    case 'comandos':
+    case 'ajuda':
+    case 'help':
+      showCommands(message);
+      break;
+
+    case 'terminoja':
+      if (!huntId) {
+        message.reply('❌ Use: `!terminoja <hunt>`\nExemplo: `!terminoja energy-vip`');
+      } else {
+        removeClaim(message, huntId);
+      }
+      break;
+
+    case 'limparclaims':
+      clearAllClaims(message);
+      break;
+
+    case 'limpasala':
+      await clearChannel(message);
+      break;
+
+    default:
+      break;
   }
 });
 
-// Tratamento de erros
-client.on('error', error => {
-  console.error('❌ Erro no cliente Discord:', error);
+client.on('messageReactionAdd', async (reaction, user) => {
+  if (user.bot) return;
+
+  if (reaction.partial) {
+    try {
+      await reaction.fetch();
+    } catch (error) {
+      console.error('Erro ao buscar reação:', error);
+      return;
+    }
+  }
+
+  const messageId = reaction.message.id;
+  const emoji = reaction.emoji.name;
+
+  if (pendingDurationSelection[messageId]) {
+    const selection = pendingDurationSelection[messageId];
+    
+    if (selection.isQueue) {
+      await processQueueDurationSelection(reaction, user, messageId);
+    } else {
+      await processDurationSelection(reaction, user, messageId);
+    }
+    return;
+  }
+
+  for (const [huntId, claim] of Object.entries(activeClaims)) {
+    if (claim.tempChannel === reaction.message.channel.id) {
+      if (emoji === '➕') {
+        await addToQueue(reaction, user, huntId);
+      } else if (emoji === '✅') {
+        await finishHunt(reaction, user, huntId);
+      }
+      break;
+    }
+  }
 });
 
-process.on('unhandledRejection', error => {
-  console.error('❌ Promise rejection não tratada:', error);
-});
-
-// Login
-client.login(TOKEN).catch(error => {
-  console.error('❌ Erro ao fazer login:', error);
-  console.error('Verifique se o TOKEN está correto na variável de ambiente.');
-  process.exit(1);
-});
+client.login(TOKEN);
